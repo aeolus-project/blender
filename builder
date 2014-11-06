@@ -42,10 +42,10 @@ parser.add_argument('--lifecycle-repo', '-L', type=str, action='append',
                     help="A lifecycle repository")
 
 
-parser.add_argument(dest='xpath', type=str,
-                    help='A provide Xpath')
+parser.add_argument('--xpath', '-x', dest='xpath', type=str, default="//*",
+                    help='A provide Xpath. If not specified, "//*" is used.')
 
-parser.add_argument('-o', '--output-directory', type=str, required=True)
+parser.add_argument('-w', '--workspace', type=str, required=True)
 
 parser.add_argument('--verbose', '-v', action='store_true', help="Verbose")
 
@@ -54,7 +54,7 @@ args = parser.parse_args()
 if args.verbose:
     logger.setLevel(logging.DEBUG)
 
-directory_output = args.output_directory
+directory_output = args.workspace
 
 import armonic.serialize
 import armonic.common
