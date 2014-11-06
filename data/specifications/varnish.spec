@@ -1,0 +1,1 @@
+#Varnish:Active >= 1

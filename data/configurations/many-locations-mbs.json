@@ -1,0 +1,25 @@
+{
+	"version" : 1,
+	"locations" : [
+		{
+			"name" : "server21@aeiche.innovation.mandriva.com",
+			"repository" : "mbs",
+			"provide_resources" : {"resource" : 100}
+		},
+		{
+			"name" : "server23@aeiche.innovation.mandriva.com",
+			"repository" : "mbs",
+			"provide_resources" : {"resource" : 100}
+		},
+		{
+			"name" : "server24@aeiche.innovation.mandriva.com",
+			"repository" : "mbs",
+			"provide_resources" : {"resource" : 100}
+		},
+		{
+			"name" : "server25@aeiche.innovation.mandriva.com",
+			"repository" : "mbs",
+			"provide_resources" : {"resource" : 100}
+		}
+	]
+}
