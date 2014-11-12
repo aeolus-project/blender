@@ -22,7 +22,7 @@ import os
 parser = argparse.ArgumentParser(prog='armonic-aeolus-unmerge')
 parser.add_argument('-ic', '--input-configuration', type=str, required=True)
 parser.add_argument('-spec', '--specification', type=str, required=True)
-parser.add_argument('-d', '--directory', type=str, required=True)
+parser.add_argument('-w', '--workspace', type=str, required=True)
 
 #parser.add_argument('-a', '--armonic-info', type=str, required=True)
 #parser.add_argument('-o', '--output-directory', type=str, required=True)
@@ -30,24 +30,29 @@ parser.add_argument('-d', '--directory', type=str, required=True)
 args = parser.parse_args()
 
 ZEPHYRUS_EXE = "zephyrus.native"
-ZEPHYRUS_PATHS = ['/home/eiche/taf/mandriva/prog/zephyrus/',
-         '/home/eiche/taf/mandriva/prog/minizinc/minizinc-1.6/bin/',
-         '/home/eiche/comp/bin/']
-
 METIS_EXE = "metis.native"
-METIS_PATHS = ['/home/eiche/taf/mandriva/prog/metis/']
 
-os.environ['PATH'] = ":".join([os.environ['PATH']] + ZEPHYRUS_PATHS + METIS_PATHS)
-
-logger.debug("export PATH=$PATH:%s" % ":".join(ZEPHYRUS_PATHS + METIS_PATHS))
-
-directory_output = args.directory
+directory_output = args.workspace
 
 if not os.path.exists(directory_output):
     logger.info("*** Creating directory '%s' for output files..." % directory_output)
     os.makedirs(directory_output)
 else:
-    logger.info("*** Using directory '%s' for output files..." % directory_output)
+    logger.info("*** Using directory '%s' for output files" % directory_output)
+
+def check_exe(exe):
+    ret = call(exe + " --help 1>2 2>/dev/null", shell=True)
+    if ret == 0:
+        return
+    elif ret == 127:
+        logger.error("'%s' is not found" % exe)
+        logger.error("Check if '%s' is in your PATH!" % exe)
+        exit(1)
+    else:
+        logger.error("Unknown error with '%s'!" % exe)
+
+check_exe(ZEPHYRUS_EXE)
+check_exe(METIS_EXE)
 
 file_input_configuration = args.input_configuration
 file_specification = args.specification
@@ -80,8 +85,13 @@ cmd = [ZEPHYRUS_EXE, "-solver", "g12",
 ]
 
 logger.info("Calling Zepyrus...")
-call(" ".join(cmd), shell=True)
 logger.debug(" ".join(cmd))
+
+ret = call(" ".join(cmd), shell=True)
+if ret != 0:
+    logger.error("%s failed. Aborting..." % ZEPHYRUS_EXE)
+    exit(ret)
+
 logger.info("Zephyrus configuration file saved to '%s'" % file_output_zephyrus)
 logger.info("Zephyrus dot file saved to '%s'" % file_output_zephyrus_dot)
 
@@ -114,8 +124,13 @@ cmd = [METIS_EXE,
    ]
 
 logger.info("Calling Metis...")
-call(" ".join(cmd), shell=True)
 logger.debug(" ".join(cmd))
+
+ret = call(" ".join(cmd), shell=True)
+if ret != 0:
+    logger.error("%s failed. Aborting..." % METIS_EXE)
+    exit(ret)
+
 logger.info("Metis configuration file saved to '%s'" % file_output_metis)
 logger.info("Metis abstract plan (dot file) saved to '%s'" % file_output_metis_abstract_plan)
 
