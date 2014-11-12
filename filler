@@ -14,7 +14,7 @@ import armonic.frontends.smartonic
 import armonic.utils
 
 parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]), default_config_files=armonic.common.CLI_CONF)
-parser.add_argument('-d', '--directory', type=str, default=None, required=True)
+parser.add_argument('-w', '--workspace', type=str, default=None, required=True)
 
 cli_base = armonic.frontends.utils.CliBase(parser)
 cli_local = armonic.frontends.utils.CliLocal(parser)
@@ -24,8 +24,8 @@ args = cli_base.parse_args()
 args = cli_local.parse_args()
 args = cli_client.parse_args()
 
-file_armonic_replay = args.directory + "/" + aeolus.common.FILE_ARMONIC_REPLAY
-file_armonic_replay_filled = args.directory + "/" + aeolus.common.FILE_ARMONIC_REPLAY_FILLED
+file_armonic_replay = args.workspace + "/" + aeolus.common.FILE_ARMONIC_REPLAY
+file_armonic_replay_filled = args.workspace + "/" + aeolus.common.FILE_ARMONIC_REPLAY_FILLED
 
 dont_call = False
 autofill = True
