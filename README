@@ -1,0 +1,48 @@
+Prerequisites
+-------------
+
+
+If Armonic has not been installed via Python distutils:
+$ export PYTHONPATH=PATH_WHERE_ARMONIC_IS
+
+Then, do Zephyrus and Metis available
+$ export PATH=$PATH:PATH_WHERE_ZEPHYRUS_IS
+$ export PATH=$PATH:PATH_WHERE_METIS_IS
+
+Maybe, we also have to export some Zephyrus solver executables
+$ export PATH=$PATH:PATH_WHERE_MINIZINC_IS
+$ ...
+
+Finally, we also suppose you have armonic-modules in the parent directory.
+
+
+Run
+---
+
+The Aeolus toolchain is composed by 4 tools which are used
+sequentialy on a shared workspace.
+
+
+1) We build an application by providing a Armonic module repository:
+
+   $ ./builder -L ../armonic-modules/ -w varnish_wp_mysql -x "Varnish//start"
+
+   Follow instruction and please choose (for this example):
+   	  Wordpress/Active/get_website
+	  Mysql/Active/add_database
+
+2) Considering we have choosen Wordpress and Mysql, we call
+   Zephyrus and Metis by provinding specification and initial
+   configuration files:
+
+   $ ./maker -w varnish_wp_mysql -spec data/specifications/varnish-wp-mysql.spec  -ic data/configurations/many-locations-mbs.json
+
+
+3) We have to fill missing variable values:
+
+   $ ./filler -w varnish_wp_mysql -L ../armonic-modules/
+
+
+4) And finally, we can launch the deployment. Here, we just print Armonic deployment commands:
+
+   $ ./launcher -w varnish_wp_mysql -s
