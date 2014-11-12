@@ -45,6 +45,11 @@ class MyProvide(Provide):
             lfms[host] = Serialize(os_type=armonic.utils.OsTypeAll())
         self.lfm = lfms[host]
 
+    def on_specialize(self, specialized):
+        print "In %-40s on %s" % (specialized, self.host)
+        
+        
+
     def on_manage(self, data):
         return True
 
