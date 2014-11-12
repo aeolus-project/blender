@@ -32,7 +32,7 @@ args = parser.parse_args()
 ZEPHYRUS_EXE = "zephyrus.native"
 METIS_EXE = "metis.native"
 
-directory_output = args.workspace
+directory_output = args.workspace + "/"
 
 if not os.path.exists(directory_output):
     logger.info("*** Creating directory '%s' for output files..." % directory_output)
