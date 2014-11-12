@@ -41,7 +41,7 @@ else:
     logger.info("*** Using directory '%s' for output files" % directory_output)
 
 def check_exe(exe):
-    ret = call(exe + " --help 1>2 2>/dev/null", shell=True)
+    ret = call(exe + " --help 2>&1 1>/dev/null", shell=True)
     if ret == 0:
         return
     elif ret == 127:
