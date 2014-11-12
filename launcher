@@ -92,7 +92,7 @@ def get_location(replay, cn):
     for item in replay['lfm']:
         if item[0].startswith(cn):
             return item[1]
-    raise Exception("Location of %s not found!" % cn)
+    raise Exception("Location of %s not found in the replay file!" % cn)
 
 
 def get_full_provide_from_full_xpath(xpath):
@@ -245,7 +245,7 @@ def run(plan, locations, provide_ret):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--directory', type=str, required=True)
+    parser.add_argument('-w', '--workspace', type=str, required=True)
 
     parser.add_argument('--simulation', '-s', action='store_true', help="Don't perform XMPP calls")
     parser.add_argument('--machine', '-m', action='store_true', help="Show required machines")
@@ -257,9 +257,9 @@ if __name__ == '__main__':
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
-    file_replay = args.directory + "/" + aeolus.common.FILE_ARMONIC_REPLAY_FILLED
-    file_metis_plan = args.directory + "/" +  aeolus.common.FILE_METIS_PLAN_JSON
-    file_configuration = args.directory + "/" +  aeolus.common.FILE_CONFIGURATION
+    file_replay = args.workspace + "/" + aeolus.common.FILE_ARMONIC_REPLAY_FILLED
+    file_metis_plan = args.workspace + "/" +  aeolus.common.FILE_METIS_PLAN_JSON
+    file_configuration = args.workspace + "/" +  aeolus.common.FILE_CONFIGURATION
 
     with open(file_replay, 'r') as f:
         replay = json.load(f)
