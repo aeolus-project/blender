@@ -4,6 +4,7 @@ import argparse
 from armonic.client.smart import Provide, smart_call
 from armonic.utils import OsTypeAll
 import armonic.common
+import readline
 
 import logging
 
@@ -25,7 +26,9 @@ def user_input_choose_amongst(choices, prefix=''):
     while True:
         for i, c in enumerate(choices) :
             print "  %s%d) %s" % (prefix, i, c)
+        readline.set_startup_hook(lambda: readline.insert_text("0"))
         answer = raw_input("%sChoice [0-%d]: " % (prefix, len(choices)-1))
+        readline.set_startup_hook()
         try:
             return choices[int(answer)]
         except Exception as e:
