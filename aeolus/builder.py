@@ -263,6 +263,22 @@ def create_components(initial, bindings):
     return components
 
 
+def get_non_local_provide(initial, bindings):
+    """Return the list of lifecycle and state that are not local
+    provide. They will be used by specification.
+
+    :rtype: [{"component":lifecycle, "state": state}]
+
+    """
+    non_local = []
+    i = initial.xpath
+    non_local.append({"component": get_lifecycle(i), "state": get_state(i)})
+    for b in bindings:
+        if b.type == "external":
+            non_local.append({"component": get_lifecycle(b.provide_xpath), "state": get_state(b.provide_xpath)})
+    return non_local
+
+
 def merge_local_require(bindings):
     """"Merge local require in bindings. This takes a list of bindings, and return a new list of bindings."""
     created_bindings = []
@@ -353,5 +369,8 @@ def generate_files(initial, bindings, specialisation, multiplicity, directory_ou
                'specialisation': specialisation,
                'initial': initial.xpath,
                'multiplicity': multiplicity,
-               'local': local},
+               'local': local,
+               'non_local': get_non_local_provide(initial, bindings)
+           },
               fd_output_armonic_info, indent=2)
+
