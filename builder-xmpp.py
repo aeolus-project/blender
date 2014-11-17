@@ -16,8 +16,8 @@ import armonic.frontends.utils
 from armonic.xmpp import XMPPAgentApi, XMPPCallSync
 
 from pprint import pprint
-import builder
-import utils
+import aeolus.builder
+import aeolus.utils
 
 agent_handler = logging.StreamHandler()
 format = '%(ip)-15s %(levelname)-19s %(module)s %(message)s'
@@ -25,6 +25,7 @@ agent_handler.setFormatter(armonic.frontends.utils.ColoredFormatter(format))
 xmpp_client = None
 logger = logging.getLogger()
 
+AEOLUS_WORKSPACE = "xmpp_builder"
 
 class BuildProvide(Provide):
 
@@ -205,8 +206,8 @@ class XMPPMaster(XMPPCallSync):
                     nargs = r.nargs
                 except AttributeError:
                     pass
-                self.bindings.append(builder.Binding(
-                    utils.get_provide_xpath(r[0].xpath),
+                self.bindings.append(aeolus.builder.Binding(
+                    aeolus.utils.get_provide_xpath(r[0].xpath),
                     r[0].provide.require.type,
                     r[0].provide.xpath,
                     nargs))
@@ -251,39 +252,47 @@ class XMPPMaster(XMPPCallSync):
             session['next'] = None
             session['has_next'] = False
 
-            builder.generate_files(self.initial, self.bindings, self.specialisation, self.multiplicity, "xmpp_builder")
+            aeolus.builder.generate_files(
+                self.initial, self.bindings, self.specialisation,
+                self.multiplicity, AEOLUS_WORKSPACE)
 
         return session
 
-
     def _handle_command_specification(self, iq, session):
+        logger.debug("Command specification starts...")
         form = self['xep_0004'].makeForm('form', 'Specify a deployment id')
         form['instructions'] = 'specify'
         form.add_field(var="deployment_id")
         session['payload'] = form
-        session['next'] = self._handle_command_init_specification_next
+        session['next'] = self._handle_command_specification_components
         session['has_next'] = True
-        session['id'] = self.session_id
         return session
 
-
-    def _handle_command_specification_next(self, payload, session):
-        xpath = payload['values']['xpath']
+    def _handle_command_specification_components(self, payload, session):
+        logger.debug("Command specification components...")
 
         form = self['xep_0004'].makeForm('form', 'Set specification')
         form['instructions'] = 'set specification'
-        form.add_field(var="deployment_id")
+        deployment_id = payload['values']['deployment_id']
+        logger.info("Directory %s is used to generate specification files" % deployment_id)
+
+        fd_armonic_info = open(AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_ARMONIC_INFO, 'r')
+        armonic_info = json.load(fd_armonic_info)
+        form.add_field(var="json",
+                       ftype="fixed",
+                       value=str(json.dumps(armonic_info['non_local']) or ""))
 
         session['payload'] = form
-        session['next'] = self._handle_command_init_specification_next
+
+        session['next'] = self._handle_command_specification_final
         session['has_next'] = True
-        session['id'] = self.session_id
         return session
 
-
-
-
-
+    def _handle_command_specification_final(self, payload, session):
+        logger.debug("Command specification final...")
+        session['next'] = None
+        session['has_next'] = False
+        return session
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(default_config_files=armonic.common.MASTER_CONF)
