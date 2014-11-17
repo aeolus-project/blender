@@ -4,6 +4,7 @@ import logging
 import common
 
 import armonic.utils
+from utils import get_lifecycle, get_state
 from pprint import pprint
 
 logger = logging.getLogger("aeolus." + __name__)
@@ -25,14 +26,6 @@ class Binding(object):
 
     def __repr__(self):
         return "%s [%s] -> %s (%s)" % (self.require_xpath, self.type, self.provide_xpath, self.arity)
-
-
-def get_lifecycle(xpath):
-    return xpath.split("/")[0]
-
-
-def get_state(xpath):
-    return xpath.split("/")[1]
 
 
 class Component(object):
