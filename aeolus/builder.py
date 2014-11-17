@@ -244,7 +244,7 @@ def create_components(initial, bindings):
         if binding.type == 'local':
             arity = 1
         else:
-            arity = 1000
+            arity = common.INFINITY
         s.provides.append(Provide(binding.provide_xpath, arity))
 
         # Secondly, we create components that require something
@@ -261,6 +261,18 @@ def create_components(initial, bindings):
     s = c.get_state(get_state(initial.xpath))
 
     return components
+
+
+def get_component_cardinality(bindings):
+    """Return the list of provide xpath which can be required several
+    time. This will be used by the user to choose how many time he
+    wants a service.
+    """
+    cardinality = []
+    for b in bindings:
+        if b.arity != 1 and b.arity != common.INFINITY:
+            cardinality.append(b.provide_xpath)
+    return cardinality
 
 
 def get_non_local_provide(initial, bindings):
@@ -370,7 +382,8 @@ def generate_files(initial, bindings, specialisation, multiplicity, directory_ou
                'initial': initial.xpath,
                'multiplicity': multiplicity,
                'local': local,
-               'non_local': get_non_local_provide(initial, bindings)
+               'non_local': get_non_local_provide(initial, bindings),
+               'cardinality': get_component_cardinality(bindings)
            },
               fd_output_armonic_info, indent=2)
 

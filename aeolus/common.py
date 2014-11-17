@@ -1,5 +1,7 @@
 import logging
 
+INFINITY = 1000
+
 FILE_ARMONIC_INFO = "armonic-info.json"
 FILE_UNIVERSE_MERGED = "universe-merged.json"
 FILE_UNIVERSE_UNMERGED = "universe.json"
