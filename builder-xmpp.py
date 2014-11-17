@@ -278,9 +278,12 @@ class XMPPMaster(XMPPCallSync):
 
         fd_armonic_info = open(AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_ARMONIC_INFO, 'r')
         armonic_info = json.load(fd_armonic_info)
-        form.add_field(var="json",
+        form.add_field(var="components",
                        ftype="fixed",
                        value=str(json.dumps(armonic_info['non_local']) or ""))
+        form.add_field(var="cardinality",
+                       ftype="fixed",
+                       value=str(json.dumps(armonic_info['cardinality']) or ""))
 
         session['payload'] = form
 
