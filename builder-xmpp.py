@@ -27,6 +27,8 @@ logger = logging.getLogger()
 
 AEOLUS_WORKSPACE = "xmpp_builder"
 
+REQUIRE_CARDINALITY = "42"
+
 class BuildProvide(Provide):
 
     def do_manage(self):
@@ -50,9 +52,9 @@ class BuildProvide(Provide):
     def do_multiplicity(self):
         return False
 
-    def on_multiplicity(self, require, data):
-        if require.type == "external":
-            require.nargs = 42
+    def on_multiplicity(self, requires, data):
+        if requires.skel.type == "external":
+            requires.nargs = 42
             return [None]
         else:
             return 1
@@ -278,6 +280,14 @@ class XMPPMaster(XMPPCallSync):
 
         fd_armonic_info = open(AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_ARMONIC_INFO, 'r')
         armonic_info = json.load(fd_armonic_info)
+
+        x = armonic_info['initial']
+        initial = {"component": aeolus.utils.get_lifecycle(x),
+                   "state": aeolus.utils.get_state(x)}
+
+        form.add_field(var="initial",
+                       ftype="fixed",
+                       value=str(json.dumps(initial)))
         form.add_field(var="components",
                        ftype="fixed",
                        value=str(json.dumps(armonic_info['non_local']) or ""))
