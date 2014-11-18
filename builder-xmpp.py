@@ -18,6 +18,7 @@ from armonic.xmpp import XMPPAgentApi, XMPPCallSync
 from pprint import pprint
 import aeolus.builder
 import aeolus.utils
+from aeolus.common import REQUIRE_CARDINALITY_PATTERN
 
 agent_handler = logging.StreamHandler()
 format = '%(ip)-15s %(levelname)-19s %(module)s %(message)s'
@@ -26,8 +27,6 @@ xmpp_client = None
 logger = logging.getLogger()
 
 AEOLUS_WORKSPACE = "xmpp_builder"
-
-REQUIRE_CARDINALITY = "42"
 
 class BuildProvide(Provide):
 
@@ -54,7 +53,7 @@ class BuildProvide(Provide):
 
     def on_multiplicity(self, requires, data):
         if requires.skel.type == "external":
-            requires.nargs = 42
+            requires.nargs = REQUIRE_CARDINALITY_PATTERN
             return [None]
         else:
             return 1
@@ -303,6 +302,25 @@ class XMPPMaster(XMPPCallSync):
 
     def _handle_command_specification_final(self, payload, session):
         logger.debug("Command specification final...")
+        spec = payload['values']['specification']
+
+        spec_file = AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_SPECIFICATION
+        logger.info("Writing specification file to '%s'" % spec_file)
+        f = open(spec_file, 'w')
+        f.write(spec)
+
+        card = json.loads(payload['values']['cardinality'])
+        print card
+        logger.debug("Cardinalities specified by user are:")
+        for c in card:
+            logger.debug("\t%s" % c)
+        f = AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_UNIVERSE
+        logger.info("Apply cardinalities to '%s'" % f)
+        aeolus.utils.apply_cardinality(f, card)
+        f = AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_UNIVERSE_MERGED
+        logger.info("Apply cardinalities to '%s'" % f)
+        aeolus.utils.apply_cardinality(f, card)
+
         session['next'] = None
         session['has_next'] = False
         return session
