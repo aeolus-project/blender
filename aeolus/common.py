@@ -1,6 +1,7 @@
 import logging
 
 INFINITY = 1000
+REQUIRE_CARDINALITY_PATTERN = "42"
 
 FILE_ARMONIC_INFO = "armonic-info.json"
 FILE_UNIVERSE_MERGED = "universe-merged.json"
@@ -14,6 +15,7 @@ FILE_ARMONIC_REPLAY_FILLED = "replay-filled.json"
 
 FILE_METIS_PLAN_JSON = "plan-metis.json"
 
+FILE_SPECIFICATION = "specification.spec"
 
 logger = logging.getLogger("aeolus")
 logger.setLevel(logging.INFO)
