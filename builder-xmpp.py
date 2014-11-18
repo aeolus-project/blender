@@ -17,6 +17,7 @@ from armonic.xmpp import XMPPAgentApi, XMPPCallSync
 
 from pprint import pprint
 import aeolus.builder
+import aeolus.maker
 import aeolus.utils
 from aeolus.common import REQUIRE_CARDINALITY_PATTERN
 
@@ -27,6 +28,7 @@ xmpp_client = None
 logger = logging.getLogger()
 
 AEOLUS_WORKSPACE = "xmpp_builder"
+INPUT_CONFIGURATION = "data/configurations/many-locations.json"
 
 class BuildProvide(Provide):
 
@@ -320,6 +322,10 @@ class XMPPMaster(XMPPCallSync):
         f = AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_UNIVERSE_MERGED
         logger.info("Apply cardinalities to '%s'" % f)
         aeolus.utils.apply_cardinality(f, card)
+
+        aeolus.maker.run(AEOLUS_WORKSPACE,
+                         INPUT_CONFIGURATION,
+                         AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_SPECIFICATION)
 
         session['next'] = None
         session['has_next'] = False
