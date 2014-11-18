@@ -9,7 +9,11 @@ logger = logging.getLogger()
 ZEPHYRUS_EXE = "zephyrus.native"
 METIS_EXE = "metis.native"
 
+
 def run(workspace, input_configuration, specification):
+    if not workspace.endswith("/"):
+        workspace = workspace + "/"
+
     if not os.path.exists(workspace):
         logger.info("*** Creating directory '%s' for output files..." % workspace)
         os.makedirs(workspace)
