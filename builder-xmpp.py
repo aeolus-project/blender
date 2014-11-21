@@ -21,6 +21,7 @@ import aeolus.maker
 import aeolus.utils
 from aeolus.common import REQUIRE_CARDINALITY_PATTERN
 
+aeolus.common.remove_default_handlers()
 agent_handler = logging.StreamHandler()
 format = '%(ip)-15s %(levelname)-19s %(module)s %(message)s'
 agent_handler.setFormatter(armonic.frontends.utils.ColoredFormatter(format))

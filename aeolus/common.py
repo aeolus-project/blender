@@ -24,4 +24,9 @@ format = '%(levelname)-7s %(module)s %(message)s'
 ch.setFormatter(logging.Formatter(format))
 logger.addHandler(ch)
 
+
+def remove_default_handlers():
+    logger.removeHandler(ch)
+
+
 repositories_to_openstack = {"mbs": "mbs-armonic-latest", "debian": "debian-wheezy-armonic-latest"}
