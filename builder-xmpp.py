@@ -248,8 +248,6 @@ class XMPPMaster(XMPPCallSync):
                 pprint("Specialisation:")
                 pprint(self.specialisation)
 
-
-        session['payload'] = form
         session['next'] = self._handle_command_init_build_next
         session['has_next'] = True
 
@@ -262,13 +260,19 @@ class XMPPMaster(XMPPCallSync):
                 self.initial, self.bindings, self.specialisation,
                 self.multiplicity)
 
+            form.add_field(var="workspace",
+                           ftype="fixed",
+                           value=workspace)
+
+        session['payload'] = form
+
         return session
 
     def _handle_command_specification(self, iq, session):
-        logger.debug("Command specification starts...")
+        logger.debug("Command %s specification starts..." % session['id'])
         form = self['xep_0004'].makeForm('form', 'Specify a deployment id')
         form['instructions'] = 'specify'
-        form.add_field(var="deployment_id")
+        form.add_field(var="workspace")
         session['payload'] = form
         session['next'] = self._handle_command_specification_components
         session['has_next'] = True
@@ -279,10 +283,13 @@ class XMPPMaster(XMPPCallSync):
 
         form = self['xep_0004'].makeForm('form', 'Set specification')
         form['instructions'] = 'set specification'
-        deployment_id = payload['values']['deployment_id']
-        logger.info("Directory %s is used to generate specification files" % deployment_id)
 
-        fd_armonic_info = open(AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_ARMONIC_INFO, 'r')
+        workspace = payload['values']['workspace']
+        session['workspace'] = workspace
+
+        logger.info("Directory %s is used to generate specification files" % workspace)
+
+        fd_armonic_info = open(workspace + "/" + aeolus.common.FILE_ARMONIC_INFO, 'r')
         armonic_info = json.load(fd_armonic_info)
 
         x = armonic_info['initial']
@@ -312,10 +319,11 @@ class XMPPMaster(XMPPCallSync):
         return session
 
     def _handle_command_specification_final(self, payload, session):
-        logger.debug("Command specification final...")
+        workspace = session['workspace']
+        logger.debug("Command specification final with workspace '%s'" % workspace)
         spec = payload['values']['specification']
 
-        spec_file = AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_SPECIFICATION
+        spec_file = workspace + "/" + aeolus.common.FILE_SPECIFICATION
         logger.info("Writing specification file to '%s'" % spec_file)
         f = open(spec_file, 'w')
         f.write(spec)
@@ -325,16 +333,16 @@ class XMPPMaster(XMPPCallSync):
         logger.debug("Cardinalities specified by user are:")
         for c in card:
             logger.debug("\t%s" % c)
-        f = AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_UNIVERSE
+        f = workspace + "/" + aeolus.common.FILE_UNIVERSE
         logger.info("Apply cardinalities to '%s'" % f)
         aeolus.utils.apply_cardinality(f, card)
-        f = AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_UNIVERSE_MERGED
+        f = workspace + "/" + aeolus.common.FILE_UNIVERSE_MERGED
         logger.info("Apply cardinalities to '%s'" % f)
         aeolus.utils.apply_cardinality(f, card)
 
-        aeolus.maker.run(AEOLUS_WORKSPACE,
+        aeolus.maker.run(workspace,
                          INPUT_CONFIGURATION,
-                         AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_SPECIFICATION)
+                         workspace + "/" + aeolus.common.FILE_SPECIFICATION)
 
         session['next'] = None
         session['has_next'] = False
