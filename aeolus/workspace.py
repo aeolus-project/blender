@@ -1,15 +1,20 @@
 import uuid
 import os
 
-SEPARATOR = "_"
+BASE_DIR = "workspaces/"
 
 
-def create_workspace(component_names):
-    d = SEPARATOR.join(component_names).lower()
+class Workspace(object):
+    def __init__(self, name=None):
+        if name is None:
+            self.name = str(uuid.uuid4())
+            self.path = BASE_DIR + self.name
+            os.makedirs(self.path)
+        else:
+            self.name = name
+            self.path = BASE_DIR + self.name
 
-    if os.path.exists(d):
-        d = d + SEPARATOR + str(uuid.uuid1())
-
-    os.makedirs(d)
-
-    return d
+    @staticmethod
+    def list():
+        dirpath, dirnames, filenames = os.walk(BASE_DIR).next()
+        return dirnames

@@ -318,7 +318,7 @@ def merge_local_require(bindings):
     return (created_bindings, merge, local)
 
 
-def generate_files(initial, bindings, specialisation, multiplicity, workspace_name=None):
+def generate_files(initial, bindings, specialisation, multiplicity, workspace_name):
     """
     :param workspace_name: If None, a workspace is created based on component names.
     """
@@ -328,10 +328,6 @@ def generate_files(initial, bindings, specialisation, multiplicity, workspace_na
     logger.info("List of Components created by Armonic:")
     for c in components:
         logger.info("\t%s on %s" % (c.name, c.lfm.lf_manager.os_type.name))
-
-    if workspace_name is None:
-        workspace_name = workspace.create_workspace([c.name for c in components])
-        logger.debug("Workspace have been created: %s" % workspace_name)
 
     file_output_universe = workspace_name + "/" + common.FILE_UNIVERSE
     file_output_universe_merged = workspace_name + "/universe-merged.json"
@@ -389,5 +385,3 @@ def generate_files(initial, bindings, specialisation, multiplicity, workspace_na
                'cardinality': get_component_cardinality(bindings)
            },
               fd_output_armonic_info, indent=2)
-
-    return workspace_name

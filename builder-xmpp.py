@@ -20,6 +20,7 @@ import aeolus.builder
 import aeolus.maker
 import aeolus.utils
 from aeolus.common import REQUIRE_CARDINALITY_PATTERN
+import aeolus.workspace
 
 aeolus.common.remove_default_handlers()
 agent_handler = logging.StreamHandler()
@@ -85,6 +86,10 @@ class XMPPMaster(XMPPCallSync):
         self['xep_0050'].add_command(node='graph',
                                      name='Set the specification',
                                      handler=self._handle_command_graph)
+        self['xep_0050'].add_command(node='provides',
+                                     name='Get the list of provides',
+                                     handler=self._handle_command_provides)
+
 
     def handle_armonic_exception(self, exception):
         # Forward exception to client
@@ -126,6 +131,32 @@ class XMPPMaster(XMPPCallSync):
         session['id'] = str(uuid4())
 
         return session
+
+    def _handle_command_workspaces(self, iq, session):
+        form = self['xep_0004'].makeForm('form', 'List of provides')
+        form['instructions'] = 'Choose a xpath amongst them'
+        form.add_reported("name")
+
+        for provide in self.lfm.provide("//*"):
+            tags = ""
+            if provide['extra'].get('tags'):
+                tags = ",".join(provide['extra']['tags'])
+
+            form.add_item(OrderedDict({
+                "xpath": provide['xpath'],
+                "tag": tags,
+                "label": provide['extra'].get('label', provide['name']),
+                "help": provide['extra'].get('help', '')
+            }))
+
+        session['payload'] = form
+        session['next'] = None  # self._handle_command_init_walk
+        session['has_next'] = False
+        session['id'] = str(uuid4())
+
+        return session
+
+
 
     def _handle_command_build(self, iq, session):
         self.session_id = str(uuid4())
@@ -256,13 +287,14 @@ class XMPPMaster(XMPPCallSync):
             session['next'] = None
             session['has_next'] = False
 
-            workspace = aeolus.builder.generate_files(
+            workspace = aeolus.workspace.Workspace()
+            aeolus.builder.generate_files(
                 self.initial, self.bindings, self.specialisation,
-                self.multiplicity)
+                self.multiplicity, workspace.path)
 
             form.add_field(var="workspace",
                            ftype="fixed",
-                           value=workspace)
+                           value=workspace.name)
 
         session['payload'] = form
 
@@ -284,11 +316,12 @@ class XMPPMaster(XMPPCallSync):
         form = self['xep_0004'].makeForm('form', 'Set specification')
         form['instructions'] = 'set specification'
 
-        workspace = payload['values']['workspace']
+        workspace_name = payload['values']['workspace']
+        workspace = aeolus.workspace.Workspace(name=workspace_name)
         session['workspace'] = workspace
-        logger.info("Directory %s is used to generate specification files" % workspace)
+        logger.info("Directory %s is used to generate specification files" % workspace.path)
 
-        fd_armonic_info = open(workspace + "/" + aeolus.common.FILE_ARMONIC_INFO, 'r')
+        fd_armonic_info = open(workspace.path + "/" + aeolus.common.FILE_ARMONIC_INFO, 'r')
         armonic_info = json.load(fd_armonic_info)
 
         x = armonic_info['initial']
@@ -319,10 +352,10 @@ class XMPPMaster(XMPPCallSync):
 
     def _handle_command_specification_final(self, payload, session):
         workspace = session['workspace']
-        logger.debug("Command specification final with workspace '%s'" % workspace)
+        logger.debug("Command specification final with workspace '%s'" % workspace.path)
         spec = payload['values']['specification']
 
-        spec_file = workspace + "/" + aeolus.common.FILE_SPECIFICATION
+        spec_file = workspace.path + "/" + aeolus.common.FILE_SPECIFICATION
         logger.info("Writing specification file to '%s'" % spec_file)
         f = open(spec_file, 'w')
         f.write(spec)
@@ -332,16 +365,16 @@ class XMPPMaster(XMPPCallSync):
         logger.debug("Cardinalities specified by user are:")
         for c in card:
             logger.debug("\t%s" % c)
-        f = workspace + "/" + aeolus.common.FILE_UNIVERSE
+        f = workspace.path + "/" + aeolus.common.FILE_UNIVERSE
         logger.info("Apply cardinalities to '%s'" % f)
         aeolus.utils.apply_cardinality(f, card)
-        f = workspace + "/" + aeolus.common.FILE_UNIVERSE_MERGED
+        f = workspace.path + "/" + aeolus.common.FILE_UNIVERSE_MERGED
         logger.info("Apply cardinalities to '%s'" % f)
         aeolus.utils.apply_cardinality(f, card)
 
-        aeolus.maker.run(workspace,
+        aeolus.maker.run(workspace.path,
                          INPUT_CONFIGURATION,
-                         workspace + "/" + aeolus.common.FILE_SPECIFICATION)
+                         workspace.path + "/" + aeolus.common.FILE_SPECIFICATION)
 
         session['next'] = None
         session['has_next'] = False
@@ -363,11 +396,12 @@ class XMPPMaster(XMPPCallSync):
         form = self['xep_0004'].makeForm('form', 'Set specification')
         form['instructions'] = 'set specification'
 
-        workspace = payload['values']['workspace']
+        workspace_name = payload['values']['workspace']
+        workspace = aeolus.workspace.Workspace(name=workspace_name)
         session['workspace'] = workspace
-        logger.info("Directory %s is used to generate specification files" % workspace)
+        logger.info("Directory %s is used to generate specification files" % workspace.path)
 
-        config_file = workspace + "/" + aeolus.common.FILE_CONFIGURATION
+        config_file = workspace.path + "/" + aeolus.common.FILE_CONFIGURATION
         logger.info("Opening configuration file '%s'" % config_file)
         f = open(config_file, 'r')
 
