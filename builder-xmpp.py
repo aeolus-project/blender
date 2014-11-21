@@ -286,7 +286,6 @@ class XMPPMaster(XMPPCallSync):
 
         workspace = payload['values']['workspace']
         session['workspace'] = workspace
-
         logger.info("Directory %s is used to generate specification files" % workspace)
 
         fd_armonic_info = open(workspace + "/" + aeolus.common.FILE_ARMONIC_INFO, 'r')
@@ -352,7 +351,7 @@ class XMPPMaster(XMPPCallSync):
         logger.debug("Command graph starts...")
         form = self['xep_0004'].makeForm('form', 'Specify a deployment id')
         form['instructions'] = 'specify'
-        form.add_field(var="deployment_id")
+        form.add_field(var="workspace")
         session['payload'] = form
         session['next'] = self._handle_command_graph_final
         session['has_next'] = True
@@ -363,10 +362,12 @@ class XMPPMaster(XMPPCallSync):
 
         form = self['xep_0004'].makeForm('form', 'Set specification')
         form['instructions'] = 'set specification'
-        deployment_id = payload['values']['deployment_id']
-        logger.info("Directory %s is used to generate specification files" % deployment_id)
 
-        config_file = AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_CONFIGURATION
+        workspace = payload['values']['workspace']
+        session['workspace'] = workspace
+        logger.info("Directory %s is used to generate specification files" % workspace)
+
+        config_file = workspace + "/" + aeolus.common.FILE_CONFIGURATION
         logger.info("Opening configuration file '%s'" % config_file)
         f = open(config_file, 'r')
 
