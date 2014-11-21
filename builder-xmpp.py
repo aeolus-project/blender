@@ -86,9 +86,9 @@ class XMPPMaster(XMPPCallSync):
         self['xep_0050'].add_command(node='graph',
                                      name='Set the specification',
                                      handler=self._handle_command_graph)
-        self['xep_0050'].add_command(node='provides',
-                                     name='Get the list of provides',
-                                     handler=self._handle_command_provides)
+        self['xep_0050'].add_command(node='workspaces',
+                                     name='Get the list of workspaces',
+                                     handler=self._handle_command_workspaces)
 
 
     def handle_armonic_exception(self, exception):
@@ -133,30 +133,25 @@ class XMPPMaster(XMPPCallSync):
         return session
 
     def _handle_command_workspaces(self, iq, session):
-        form = self['xep_0004'].makeForm('form', 'List of provides')
-        form['instructions'] = 'Choose a xpath amongst them'
+        form = self['xep_0004'].makeForm('form', 'List of workspaces')
+        form['instructions'] = 'Choose amongst them'
         form.add_reported("name")
+        form.add_reported("initial")
+        form.add_reported("components")
 
-        for provide in self.lfm.provide("//*"):
-            tags = ""
-            if provide['extra'].get('tags'):
-                tags = ",".join(provide['extra']['tags'])
-
+        for wp in aeolus.workspace.Workspace.all():
+            infos = wp.infos()
             form.add_item(OrderedDict({
-                "xpath": provide['xpath'],
-                "tag": tags,
-                "label": provide['extra'].get('label', provide['name']),
-                "help": provide['extra'].get('help', '')
+                "name": wp.name,
+                "initial": infos['initial'],
+                "components": " ".join(infos['components'])
             }))
 
         session['payload'] = form
-        session['next'] = None  # self._handle_command_init_walk
+        session['next'] = None
         session['has_next'] = False
-        session['id'] = str(uuid4())
 
         return session
-
-
 
     def _handle_command_build(self, iq, session):
         self.session_id = str(uuid4())
