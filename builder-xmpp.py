@@ -288,6 +288,12 @@ class XMPPMaster(XMPPCallSync):
         initial = {"component": aeolus.utils.get_lifecycle(x),
                    "state": aeolus.utils.get_state(x)}
 
+        cardinality = []
+        for c in armonic_info['cardinality']:
+            p = lfm.provide(c)[0]
+            label = p['extra'].get('label', p['name'])
+            cardinality.append({'xpath': c, 'label': label})
+
         form.add_field(var="initial",
                        ftype="fixed",
                        value=str(json.dumps(initial)))
@@ -296,7 +302,7 @@ class XMPPMaster(XMPPCallSync):
                        value=str(json.dumps(armonic_info['non_local']) or ""))
         form.add_field(var="cardinality",
                        ftype="fixed",
-                       value=str(json.dumps(armonic_info['cardinality']) or ""))
+                       value=str(json.dumps(cardinality) or ""))
 
         session['payload'] = form
 
