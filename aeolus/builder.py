@@ -6,6 +6,7 @@ import common
 import armonic.utils
 from utils import get_lifecycle, get_state
 from pprint import pprint
+import workspace
 
 logger = logging.getLogger("aeolus." + __name__)
 
@@ -317,26 +318,35 @@ def merge_local_require(bindings):
     return (created_bindings, merge, local)
 
 
-def generate_files(initial, bindings, specialisation, multiplicity, directory_output):
-    file_output_universe = directory_output + "/" + common.FILE_UNIVERSE
-    file_output_universe_merged = directory_output + "/universe-merged.json"
-    file_output_armonic_info = directory_output + "/armonic-info.json"
-
-    if not os.path.exists(directory_output):
-        logger.info("*** Creating directory '%s' for output files..." % directory_output)
-        os.makedirs(directory_output)
-    else:
-        logger.info("*** Using directory '%s' for output files..." % directory_output)
-
-    fd_output_universe = open(file_output_universe, 'w')
-    fd_output_universe_merged = open(file_output_universe_merged, 'w')
-    fd_output_armonic_info = open(file_output_armonic_info, 'w')
+def generate_files(initial, bindings, specialisation, multiplicity, workspace_name=None):
+    """
+    :param workspace_name: If None, a workspace is created based on component names.
+    """
 
     logger.info("initial XPath: %s" % initial.xpath)
     components = create_components(initial, bindings)
     logger.info("List of Components created by Armonic:")
     for c in components:
         logger.info("\t%s on %s" % (c.name, c.lfm.lf_manager.os_type.name))
+
+    if workspace_name is None:
+        workspace_name = workspace.create_workspace([c.name for c in components])
+        logger.debug("Workspace have been created: %s" % workspace_name)
+
+    file_output_universe = workspace_name + "/" + common.FILE_UNIVERSE
+    file_output_universe_merged = workspace_name + "/universe-merged.json"
+    file_output_armonic_info = workspace_name + "/armonic-info.json"
+
+    if not os.path.exists(workspace_name):
+        logger.info("*** Creating directory '%s' for output files..." % workspace_name)
+        os.makedirs(workspace_name)
+    else:
+        logger.info("*** Using directory '%s' for output files..." % workspace_name)
+
+    fd_output_universe = open(file_output_universe, 'w')
+    fd_output_universe_merged = open(file_output_universe_merged, 'w')
+    fd_output_armonic_info = open(file_output_armonic_info, 'w')
+
 
     implementations = implementation_json(components)
     logger.info("List of bindings created by Armonic:")
@@ -380,3 +390,4 @@ def generate_files(initial, bindings, specialisation, multiplicity, directory_ou
            },
               fd_output_armonic_info, indent=2)
 
+    return workspace_name

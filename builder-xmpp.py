@@ -258,9 +258,9 @@ class XMPPMaster(XMPPCallSync):
             session['next'] = None
             session['has_next'] = False
 
-            aeolus.builder.generate_files(
+            workspace = aeolus.builder.generate_files(
                 self.initial, self.bindings, self.specialisation,
-                self.multiplicity, AEOLUS_WORKSPACE)
+                self.multiplicity)
 
         return session
 
