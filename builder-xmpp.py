@@ -81,6 +81,9 @@ class XMPPMaster(XMPPCallSync):
         self['xep_0050'].add_command(node='specification',
                                      name='Set the specification',
                                      handler=self._handle_command_specification)
+        self['xep_0050'].add_command(node='graph',
+                                     name='Set the specification',
+                                     handler=self._handle_command_graph)
 
     def handle_armonic_exception(self, exception):
         # Forward exception to client
@@ -95,7 +98,6 @@ class XMPPMaster(XMPPCallSync):
             iq.send(block=False)
         except (IqTimeout, IqError):
             pass
-
 
     def _handle_command_provides(self, iq, session):
         form = self['xep_0004'].makeForm('form', 'List of provides')
@@ -330,6 +332,38 @@ class XMPPMaster(XMPPCallSync):
         session['next'] = None
         session['has_next'] = False
         return session
+
+    def _handle_command_graph(self, iq, session):
+        logger.debug("Command graph starts...")
+        form = self['xep_0004'].makeForm('form', 'Specify a deployment id')
+        form['instructions'] = 'specify'
+        form.add_field(var="deployment_id")
+        session['payload'] = form
+        session['next'] = self._handle_command_graph_final
+        session['has_next'] = True
+        return session
+
+    def _handle_command_graph_final(self, payload, session):
+        logger.debug("Command graph final...")
+
+        form = self['xep_0004'].makeForm('form', 'Set specification')
+        form['instructions'] = 'set specification'
+        deployment_id = payload['values']['deployment_id']
+        logger.info("Directory %s is used to generate specification files" % deployment_id)
+
+        config_file = AEOLUS_WORKSPACE + "/" + aeolus.common.FILE_CONFIGURATION
+        logger.info("Opening configuration file '%s'" % config_file)
+        f = open(config_file, 'r')
+
+        form.add_field(var="configuration",
+                       ftype="fixed",
+                       value=str(f.read()))
+
+        session['payload'] = form
+        session['next'] = None
+        session['has_next'] = False
+        return session
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(default_config_files=armonic.common.MASTER_CONF)
