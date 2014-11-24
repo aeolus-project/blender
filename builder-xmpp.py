@@ -312,7 +312,7 @@ class XMPPMaster(XMPPCallSync):
         form['instructions'] = 'set specification'
 
         workspace_name = payload['values']['workspace']
-        workspace = aeolus.workspace.Workspace(name=workspace_name)
+        workspace = aeolus.workspace.Workspace.use(workspace_name)
         session['workspace'] = workspace
         logger.info("Directory %s is used to generate specification files" % workspace.path)
 
@@ -392,7 +392,7 @@ class XMPPMaster(XMPPCallSync):
         form['instructions'] = 'set specification'
 
         workspace_name = payload['values']['workspace']
-        workspace = aeolus.workspace.Workspace(name=workspace_name)
+        workspace = aeolus.workspace.Workspace.use(workspace_name)
         session['workspace'] = workspace
         logger.info("Directory %s is used to generate specification files" % workspace.path)
 

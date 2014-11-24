@@ -11,6 +11,10 @@ BASE_DIR = "workspaces/"
 logger = logging.getLogger("aeolus." + __name__)
 
 
+class WorkspaceException(Exception):
+    pass
+
+
 class Workspace(object):
     def __init__(self, name=None):
         if name is None:
@@ -21,6 +25,15 @@ class Workspace(object):
         else:
             self.name = name
             self.path = BASE_DIR + self.name
+
+    @staticmethod
+    def use(name):
+        if name is None:
+            raise WorkspaceException("Workspace name can not be None!")
+        for wp in Workspace.all():
+            if wp.name == name:
+                return wp
+        raise WorkspaceException("Workspace '%s' has not be found!" % name)
 
     @staticmethod
     def all():
