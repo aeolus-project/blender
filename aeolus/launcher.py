@@ -1,12 +1,12 @@
+#!/usr/bin/python
 import os
 import json
 import re
 import pprint
 
-import common
+import aeolus.common
 
 from armonic.xmpp.client import XMPPCallSync, XMPPAgentApi, XMPPError
-
 import logging
 format = '%(levelname)-7s %(module)s %(message)s'
 logging.basicConfig(level=logging.INFO, format=format)
@@ -92,7 +92,7 @@ def get_location(replay, cn):
     for item in replay['lfm']:
         if item[0].startswith(cn):
             return item[1]
-    raise Exception("Location of %s not found!" % cn)
+    raise Exception("Location of %s not found in the replay file!" % cn)
 
 
 def get_full_provide_from_full_xpath(xpath):
@@ -238,87 +238,3 @@ def run(plan, locations, provide_ret):
         except (XMPPError, Exception):
             print "armocli", p['cmd'], '-J ', p['jid'] , p['xpath'], "'%s'" % json.dumps(p['args'])
             raise
-
-
-
-
-if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--directory', type=str, required=True)
-
-    parser.add_argument('--simulation', '-s', action='store_true', help="Don't perform XMPP calls")
-    parser.add_argument('--machine', '-m', action='store_true', help="Show required machines")
-    parser.add_argument('--nova', '-n', action='store_true', help="Show nova boot commands")
-    parser.add_argument('--verbose', '-v', action='store_true', help="Verbose")
-
-    args = parser.parse_args()
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-    file_replay = args.directory + "/" + common.FILE_ARMONIC_REPLAY_FILLED
-    file_metis_plan = args.directory + "/" +  common.FILE_METIS_PLAN_JSON
-    file_configuration = args.directory + "/" +  common.FILE_CONFIGURATION
-
-    with open(file_replay, 'r') as f:
-        replay = json.load(f)
-
-    with open(file_metis_plan, 'r') as f:
-        metis_plan = json.load(f)
-
-    with open(file_configuration, 'r') as f:
-        configuration = json.load(f)
-
-    # Here 
-    transform_nodeid_to_cn(replay)
-
-    plan = metis_to_armonic(metis_plan, replay)
-
-    if args.simulation:
-        for p in plan:
-            args = p['args'] 
-            args[0] += p['args_host']
-            print "armocli -j master@im.aeolus.org -p master  %s -J %s %s --json %s " % (p['cmd'], p['jid'], p['xpath'], json.dumps(args))
-        exit(0)
-
-    locations = get_all_locations(replay)
-    if args.machine or args.nova:
-        machines = []
-        for location in locations:
-            for l in configuration['locations']:
-                if l['name'] == location:
-                    machines.append((location, l['repository']))
-        if args.machine:
-            for m, r in machines:
-                    print m, "[%s]" % r
-        if args.nova:
-            for m, r in machines:
-                image = common.repositories_to_openstack[r]
-                server_name = re.search("(.*)@.*", m).group(1)
-                print "nova  boot --flavor m1.tiny --image %s --meta armonic_xmpp_domain=aeiche.innovation.mandriva.com %s" % (image, server_name)
-        exit(0)
-
-    provide_ret = get_provide_ret(replay)
-    logger.debug("Provide ret")
-    for p in provide_ret:
-        logger.debug("\t%s" % p)
-    
-    xmpp_account = "master@aeiche.innovation.mandriva.com"
-    logger.info("Using account XMPP %s" % xmpp_account)
-    class XMPPClient(XMPPCallSync):
-        def session_start(self, event):
-            XMPPCallSync.session_start(self, event)
-            self.join_muc_room("aeolus")
-
-    master =  XMPPClient(xmpp_account, "master", autoconnect=True, muc_domain="logs.aeiche.innovation.mandriva.com")
-    
-    logger.info("Retrieving public IP from JID...")
-    for k in locations:
-        locations[k] =  XMPPAgentApi(master, k+"/agent", deployment_id=DEPLOYMENT_ID).info()['public-ip']
-        logger.info("\t%s: %s" % (k, locations[k]))
-
-    run(plan, locations, provide_ret)
-
-    master.disconnect()
-
