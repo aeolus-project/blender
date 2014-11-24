@@ -46,9 +46,6 @@ if __name__ == '__main__':
     with open(file_configuration, 'r') as f:
         configuration = json.load(f)
 
-    # Here 
-    aeolus.launcher.transform_nodeid_to_cn(replay)
-
     plan = aeolus.launcher.metis_to_armonic(metis_plan, replay)
 
     if args.simulation:

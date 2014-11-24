@@ -18,7 +18,8 @@ logging.getLogger("sleekxmpp").setLevel(logging.INFO)
 DEPLOYMENT_ID = "aeolus"
 
 def transform_nodeid_to_cn(replay):
-    """Transform nodeid to component name"""
+    """Transform nodeid to component name by modifiying the replay
+    structure."""
     mappings = replay['mapping']
 
     def transform(section):
@@ -147,6 +148,19 @@ def get_variable_from_provide_ret(provide_ret, xpath):
 #     ("//xpath/to/variable", {0: value})
 #  ], {'source' : xpath, 'id': uuid})
 def metis_to_armonic(metis_plan, replay):
+    """The plan from metis is completed with variables that comes from
+    the replay file.
+
+    This returns a list of armonic commands where each command is a
+    dict which contains keys
+    cmd: state-goto or provide-call
+    jid: the agent location
+    xpath: the provide or state xpath
+    args: the variables
+    args_host: variables that contain host value (need to be translated jid -> ip)
+    """
+    aeolus.launcher.transform_nodeid_to_cn(replay)
+
     plan = []
     cmd = {}
     for action in metis_plan:
