@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('-w', '--workspace', type=str, required=True)
 
     parser.add_argument('--simulation', '-s', action='store_true', help="Don't perform XMPP calls")
+    parser.add_argument('--plan', '-p', action='store_true', help="Don't perform XMPP calls")
     parser.add_argument('--machine', '-m', action='store_true', help="Show required machines")
     parser.add_argument('--nova', '-n', action='store_true', help="Show nova boot commands")
     parser.add_argument('--verbose', '-v', action='store_true', help="Verbose")
@@ -47,6 +48,11 @@ if __name__ == '__main__':
         configuration = json.load(f)
 
     plan = aeolus.launcher.metis_to_armonic(metis_plan, replay)
+
+    if args.plan:
+        import pprint
+        pprint.pprint(aeolus.launcher.visualisation_plan(args.workspace))
+        exit(0)
 
     if args.simulation:
         for p in plan:
