@@ -5,6 +5,7 @@ import re
 import pprint
 
 import aeolus.common
+import utils
 
 from armonic.xmpp.client import XMPPCallSync, XMPPAgentApi, XMPPError
 import logging
@@ -187,9 +188,10 @@ def metis_to_armonic(metis_plan, replay):
                 action['component_target'],
                 action['provide_target'])
 
-            cmd = {'cmd':"provide-call", "jid":location, "xpath": remove_location(xpath)}
+            cmd = {'cmd':"provide-call", "jid":location, "xpath": remove_location(xpath), "component_name_target": action['component_target']}
             logger.info(cmd)
 
+        cmd['component_name'] = cn
         cmd['args'] = [get_variable(replay, xpath, "variables"), {'source' : 'metis', 'id': DEPLOYMENT_ID}]
         logger.debug("Variables of %s %s %s: %s" % (cmd['jid'], cmd['cmd'], cmd['xpath'], cmd['args']))
         cmd['args_host'] = get_variable(replay, xpath, "variables_host")
@@ -198,6 +200,44 @@ def metis_to_armonic(metis_plan, replay):
 
     return plan
 
+
+def visualisation_plan(workspace_path):
+    file_replay = workspace_path + "/" + aeolus.common.FILE_ARMONIC_REPLAY_FILLED
+    file_metis_plan = workspace_path + "/" +  aeolus.common.FILE_METIS_PLAN_JSON
+
+    with open(file_replay, 'r') as f:
+        replay = json.load(f)
+    with open(file_metis_plan, 'r') as f:
+        metis_plan = json.load(f)
+
+    plan = aeolus.launcher.metis_to_armonic(metis_plan, replay)
+
+    def is_final_state(jid, cpt, plan):
+        # Used to know if a component state change is the last one or not.
+        for p in plan:
+            if p['cmd'] == 'state-goto' and p['jid'] == jid and utils.get_lifecycle(p['xpath']) == cpt:
+                return False
+        return True
+
+    ret = []
+
+    for idx, action in enumerate(plan):
+        tmp = {"component_name": action['component_name']}
+
+        if action['cmd'] == "state-goto":
+            location = action['jid']
+            cpt = utils.get_lifecycle(action['xpath'])
+            state = utils.get_state(action['xpath'])
+            final = is_final_state(location, cpt, plan[idx+1:])
+            tmp.update({"location": location, "component_type": cpt, "state":state, "final": final, "action": action['cmd']})
+        else:
+            tmp.update({"action": action['cmd'],
+                        "component_name": action['component_name'],
+                        "component_name_target": action['component_name_target'],
+                        "port": action['xpath']})
+        ret.append(tmp)
+
+    return ret
 
 def run(plan, locations, provide_ret):
     for p in plan:
