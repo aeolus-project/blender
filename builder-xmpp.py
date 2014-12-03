@@ -82,9 +82,8 @@ class FillProvide(Provide):
             return True
         return False
 
-    def do_manage(self):
-        self.manage = True
-        return False
+    def on_manage(self, data):
+        return True
 
     def do_call(self):
         return False
@@ -514,14 +513,18 @@ class XMPPMaster(XMPPCallSync):
             logger.debug("Step: Create root_provide")
             xpath = payload['values']['xpath']
             self.root_provide = FillProvide(xpath)
-            input_file = 'varnish-wp-nfs-haproxy-galera/replay.json'
-            output_file = 'varnish-wp-nfs-haproxy-galera/replay-filled-warmonic.json'
+            input_file = 'replay.json'
+            output_file = 'replay-filled-warmonic.json'
             with open(input_file) as h:
                 values = json.load(h)
             self.smart = smart_call(self.root_provide, values)
 
         if self.current_step == "validation":
             provide, step, args = self.smart.send(json.loads(payload['values']['validation']))
+        elif self.current_step == "manage":
+            # Alwayes manage the provide. We do this step to give
+            # current provide information to warmonic
+            provide, step, args = self.smart.send(True)
         else:
             provide, step, args = self.smart.next()
 
@@ -575,6 +578,8 @@ class XMPPMaster(XMPPCallSync):
                                        required=variable.required)
                 for key, value in variable.extra.items():
                     field.add_option(label=str(key), value=str(value))
+        elif step == 'manage':
+            pass
 
         session['payload'] = form
         session['next'] = self._handle_command_fill_next
