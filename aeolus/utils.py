@@ -34,3 +34,25 @@ def apply_cardinality(universe_path, cardinalities):
         ret = replace(u)
         with open(universe_path, 'w') as f:
             json.dump(ret, f, indent=1)
+
+
+def force_repositories(input_configuration):
+    """We create specification rules to force location to use the
+    declared repositories. This is due to a bug in zephyrus...
+    This create clauses such as:
+    at{server14@aeiche.innovation.mandriva.com}(#(debian,debian_stub_package) = 1)and
+    at{server21@aeiche.innovation.mandriva.com}(#(mbs,mbs_stub_package) = 1)and
+    """
+    clauses = []
+    with open(input_configuration, 'r') as f:
+        u = json.load(f)
+        for l in u['locations']:
+            srv_name = l['name']
+            repo = l['repository']
+            if repo == "mbs":
+                pkg = "mbs_stub_package"
+            else:
+                pkg = "debian_stub_package"
+
+            clauses.append("and at{%s}(#(%s,%s) = 1)" % (srv_name, repo, pkg))
+    return clauses
