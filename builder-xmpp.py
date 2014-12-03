@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import logging
 import configargparse as argparse
 from uuid import uuid4
@@ -63,6 +64,35 @@ class BuildProvide(Provide):
         else:
             return 1
 
+
+lfms = {}
+
+
+class FillProvide(Provide):
+
+    def on_lfm(self, host):
+        self.lfm_host = host
+        self.host = host
+        if host not in lfms:
+            lfms[host] = Serialize(os_type=armonic.utils.OsTypeAll())
+        self.lfm = lfms[host]
+
+    def ignore_error_on_variable(self, variable):
+        if variable.type in ['armonic_host', 'host', 'armonic_hosts'] or variable.belongs_provide_ret:
+            return True
+        return False
+
+    def do_manage(self):
+        self.manage = True
+        return False
+
+    def do_call(self):
+        return False
+
+    def do_multiplicity(self):
+        return False
+
+
 class XMPPMaster(XMPPCallSync):
 
     def __init__(self, jid, password, plugins=[], muc_domain=None, lfm=None):
@@ -93,6 +123,9 @@ class XMPPMaster(XMPPCallSync):
         self['xep_0050'].add_command(node='deployment',
                                      name='Launch a deployment',
                                      handler=self._handle_command_deployment)
+        self['xep_0050'].add_command(node='fill',
+                                     name='Fill the specification',
+                                     handler=self._handle_command_fill)
 
     def handle_armonic_exception(self, exception):
         # Forward exception to client
@@ -294,7 +327,7 @@ class XMPPMaster(XMPPCallSync):
             # For each provide, and for each remote require of this
             # provide, we get its xpath and the xpath of required
             # provide.
-            # 
+            #
             # The multiplicicty section is a dict where keys are the
             # xpath of a require.
             # At each key is associated the xpath of the required provide.
@@ -454,6 +487,104 @@ class XMPPMaster(XMPPCallSync):
         session['payload'] = form
         session['next'] = None
         session['has_next'] = False
+        return session
+
+    def _handle_command_fill(self, iq, session):
+        self.session_id = str(uuid4())
+        self.smart = None
+        self.root_provide = None
+        self.current_step = None
+
+        self.bindings = []
+        self.initial = None
+        self.specialisation = []
+        self.multiplicity = {}
+
+        logger.debug("Command %s fill starts..." % session['id'])
+        form = self['xep_0004'].makeForm('form', 'Specify a deployment id')
+        form['instructions'] = 'specify'
+        form.add_field(var="workspace")
+        session['payload'] = form
+        session['next'] = self._handle_command_fill_next
+        session['has_next'] = True
+        return session
+
+    def _handle_command_fill_next(self, payload, session):
+        if self.smart is None:
+            logger.debug("Step: Create root_provide")
+            xpath = payload['values']['xpath']
+            self.root_provide = FillProvide(xpath)
+            input_file = 'varnish-wp-nfs-haproxy-galera/replay.json'
+            output_file = 'varnish-wp-nfs-haproxy-galera/replay-filled-warmonic.json'
+            with open(input_file) as h:
+                values = json.load(h)
+            self.smart = smart_call(self.root_provide, values)
+
+        if self.current_step == "validation":
+            provide, step, args = self.smart.send(json.loads(payload['values']['validation']))
+        else:
+            provide, step, args = self.smart.next()
+
+        logger.warning("%s %s %s" % (provide, step, args))
+
+        if isinstance(args, SmartException):
+            self.report_exception(session['from'], args)
+            self.smart.next()
+
+        if provide is None and step is STEP_DEPLOYMENT_VALUES:
+            with open(output_file, 'w') as fp:
+                json.dump(args, fp, indent=2)
+                logger.info("Deployment values written in %s" %
+                             output_file)
+
+        form = self['xep_0004'].makeForm('form', 'Fill specification')
+        self.current_step = step
+
+        logger.debug("Current step is now %s" % step)
+
+        form['instructions'] = step
+        form.add_field(var="provide",
+                       ftype="fixed",
+                       value=provide.xpath or provide.generic_xpath,
+                       label=provide.extra.get('label', provide.name))
+
+        form.add_field(var="tree_id",
+                       ftype="fixed",
+                       value=str(json.dumps(provide.tree_id)))
+
+        form.add_field(var="host",
+                       ftype="fixed",
+                       value=str(json.dumps(provide.lfm_host) or ""))
+
+        if step == 'validation':
+            for variable in provide.variables():
+                idx = variable.from_require.multiplicity_num
+                value = json.dumps(variable.value_get_one())
+                field = form.add_field(var=str(variable.xpath),
+                                       label=str(variable.name),
+                                       ftype="list-multi",
+                                       options=[
+                                           {"label": "value", "value": str(value)},
+                                           {"label": "index", "value": str(idx)},
+                                           {"label": "type", "value": str(variable.type)},
+                                           {"label": "error", "value": str(getattr(variable, "error", ""))},
+                                           {"label": "resolved_by", "value": str(getattr(variable._resolved_by, "xpath", ""))},
+                                           {"label": "suggested_by", "value": str(getattr(variable._suggested_by, "xpath", ""))},
+                                           {"label": "set_by", "value": str(getattr(variable._set_by, "xpath", ""))},
+                                           {"label": "belongs_provide_ret", "value": str(variable.belongs_provide_ret)}],
+                                       required=variable.required)
+                for key, value in variable.extra.items():
+                    field.add_option(label=str(key), value=str(value))
+
+        session['payload'] = form
+        session['next'] = self._handle_command_fill_next
+        session['has_next'] = True
+
+        # If the root provide step is done, this is the last answer.
+        if step == 'done' and provide == self.root_provide:
+            session['next'] = None
+            session['has_next'] = False
+
         return session
 
 
