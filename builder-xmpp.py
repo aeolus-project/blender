@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import os
 import logging
 import configargparse as argparse
 from uuid import uuid4
@@ -11,10 +10,10 @@ from sleekxmpp.exceptions import IqTimeout, IqError
 
 import armonic.common
 from armonic.serialize import Serialize
-from armonic.client.smart import Provide, smart_call, SmartException
+from armonic.client.smart import Provide, smart_call, SmartException, STEP_DEPLOYMENT_VALUES
 from armonic.utils import OsTypeAll
 import armonic.frontends.utils
-from armonic.xmpp import XMPPAgentApi, XMPPCallSync
+from armonic.xmpp import XMPPCallSync
 
 from pprint import pprint
 import aeolus.builder
@@ -33,6 +32,7 @@ logger = logging.getLogger()
 
 AEOLUS_WORKSPACE = "xmpp_builder"
 INPUT_CONFIGURATION = "data/configurations/many-locations-multiple-repos.json"
+
 
 class BuildProvide(Provide):
 
@@ -538,7 +538,7 @@ class XMPPMaster(XMPPCallSync):
             with open(output_file, 'w') as fp:
                 json.dump(args, fp, indent=2)
                 logger.info("Deployment values written in %s" %
-                             output_file)
+                            output_file)
 
         form = self['xep_0004'].makeForm('form', 'Fill specification')
         self.current_step = step
