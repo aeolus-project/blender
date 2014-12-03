@@ -221,6 +221,8 @@ def visualisation_plan(workspace_path):
 
     ret = []
 
+    ret.append({"action": "begin", "length": len(plan)})
+
     for idx, action in enumerate(plan):
         tmp = {"component_name": action['component_name']}
 
@@ -229,13 +231,16 @@ def visualisation_plan(workspace_path):
             cpt = utils.get_lifecycle(action['xpath'])
             state = utils.get_state(action['xpath'])
             final = is_final_state(location, cpt, plan[idx+1:])
-            tmp.update({"location": location, "component_type": cpt, "state":state, "final": final, "action": action['cmd']})
+            last_one = (idx == len(plan) - 1)
+            tmp.update({"location": location, "component_type": cpt, "state":state, "final": final, "action": action['cmd'], "last_one":last_one})
         else:
             tmp.update({"action": action['cmd'],
                         "component_name": action['component_name'],
                         "component_name_target": action['component_name_target'],
                         "port": action['xpath']})
         ret.append(tmp)
+
+    ret.append({"action": "end"})
 
     return ret
 
