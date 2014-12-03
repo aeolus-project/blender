@@ -2,6 +2,11 @@
 	"version" : 1,
 	"locations" : [
 		{
+			"name" : "server10@aeiche.innovation.mandriva.com",
+			"repository" : "debian",
+			"provide_resources" : {"resource" : 100}
+		},
+		{
 			"name" : "server11@aeiche.innovation.mandriva.com",
 			"repository" : "debian",
 			"provide_resources" : {"resource" : 100}
@@ -17,8 +22,8 @@
 			"provide_resources" : {"resource" : 100}
 		},
 		{
-			"name" : "server14@aeiche.innovation.mandriva.com",
-			"repository" : "debian",
+			"name" : "server20@aeiche.innovation.mandriva.com",
+			"repository" : "mbs",
 			"provide_resources" : {"resource" : 100}
 		},
 		{
@@ -33,11 +38,6 @@
 		},
 		{
 			"name" : "server24@aeiche.innovation.mandriva.com",
-			"repository" : "mbs",
-			"provide_resources" : {"resource" : 100}
-		},
-		{
-			"name" : "server25@aeiche.innovation.mandriva.com",
 			"repository" : "mbs",
 			"provide_resources" : {"resource" : 100}
 		}
