@@ -21,6 +21,7 @@ import aeolus.maker
 import aeolus.utils
 from aeolus.common import REQUIRE_CARDINALITY_PATTERN
 import aeolus.workspace
+import aeolus.launcher
 
 aeolus.common.remove_default_handlers()
 agent_handler = logging.StreamHandler()
@@ -30,7 +31,7 @@ xmpp_client = None
 logger = logging.getLogger()
 
 AEOLUS_WORKSPACE = "xmpp_builder"
-INPUT_CONFIGURATION = "data/configurations/many-locations.json"
+INPUT_CONFIGURATION = "data/configurations/many-locations-multiple-repos.json"
 
 class BuildProvide(Provide):
 
@@ -89,7 +90,9 @@ class XMPPMaster(XMPPCallSync):
         self['xep_0050'].add_command(node='workspaces',
                                      name='Get the list of workspaces',
                                      handler=self._handle_command_workspaces)
-
+        self['xep_0050'].add_command(node='deployment',
+                                     name='Launch a deployment',
+                                     handler=self._handle_command_deployment)
 
     def handle_armonic_exception(self, exception):
         # Forward exception to client
@@ -132,6 +135,45 @@ class XMPPMaster(XMPPCallSync):
 
         return session
 
+    def _handle_command_deployment(self, iq, session):
+        """ To launch a deployument, we first get a workspace ID. This workspace ID is then used to
+        """
+        logger.debug("Command deployment starts...")
+        form = self['xep_0004'].makeForm('form', 'Specify a deployment id')
+        form['instructions'] = 'specify'
+        form.add_field(var="workspace")
+        session['payload'] = form
+        session['next'] = self._handle_command_deployment_start
+        session['has_next'] = True
+        return session
+
+    def _handle_command_deployment_start(self, payload, session):
+        logger.debug("Command deployment workspace...")
+
+        form = self['xep_0004'].makeForm('form', 'Set specification')
+        form['instructions'] = 'set specification'
+
+        workspace_name = payload['values']['workspace']
+        workspace = aeolus.workspace.Workspace.use(workspace_name)
+        session['workspace'] = workspace
+
+        logger.debug("Starting command deploy with id: '%s'" % workspace.name)
+        self.join_muc_room(workspace.name)
+
+        plan = aeolus.launcher.visualisation_plan(workspace.path)
+        import time
+        for p in plan:
+            msg = self.Message()
+            msg['body'] = json.dumps(p)
+            logger.debug("Sending: %s", msg['body'])
+            self.send_muc_message(workspace.name, msg)
+            time.sleep(1)
+
+        session['payload'] = form
+        session['next'] = None
+        session['has_next'] = False
+        return session
+
     def _handle_command_workspaces(self, iq, session):
         form = self['xep_0004'].makeForm('form', 'List of workspaces')
         form['instructions'] = 'Choose amongst them'
@@ -139,7 +181,9 @@ class XMPPMaster(XMPPCallSync):
         form.add_reported("initial")
         form.add_reported("components")
 
+        logger.debug("Getting the list of workspaces")
         for wp in aeolus.workspace.Workspace.all():
+            logger.debug("\t%s" % wp.name)
             infos = wp.infos()
             form.add_item(OrderedDict({
                 "name": wp.name,
@@ -349,8 +393,11 @@ class XMPPMaster(XMPPCallSync):
         workspace = session['workspace']
         logger.debug("Command specification final with workspace '%s'" % workspace.path)
         spec = payload['values']['specification']
-
         spec_file = workspace.path + "/" + aeolus.common.FILE_SPECIFICATION
+
+        logger.info("Adding force_repositories clauses to specification file to '%s'" % spec_file)
+        spec = spec + "\n".join(aeolus.utils.force_repositories(INPUT_CONFIGURATION))
+
         logger.info("Writing specification file to '%s'" % spec_file)
         f = open(spec_file, 'w')
         f.write(spec)
@@ -370,7 +417,7 @@ class XMPPMaster(XMPPCallSync):
         aeolus.maker.run(workspace.path,
                          INPUT_CONFIGURATION,
                          workspace.path + "/" + aeolus.common.FILE_SPECIFICATION)
-
+        logger.info("Maker has generated all files")
         session['next'] = None
         session['has_next'] = False
         return session
