@@ -7,6 +7,23 @@ def get_providers_from_bindings(universe, requirer):
     return [b['provider'] for b in universe['bindings'] if b['requirer'] == requirer]
  
 
+def used_locations(configuration):
+    """Remove locations that are not used by some components. Sometimes,
+    the unmerge can remove all components of a location. This location
+    is then empty and is removed from the location list.
+    """
+    used = []
+    for c in configuration['components']:
+        if c['location'] not in used:
+            used.append(c['location'])
+
+    locations = []
+    for l in configuration['locations']:
+        if l['name'] in used:
+            locations.append(l)
+
+    return locations
+
 def unmerge(universe_merged, merge, local):
     def c_suffix(component_name):
         return int(component_name.split('-')[-1])
@@ -43,5 +60,8 @@ def unmerge(universe_merged, merge, local):
                     if c['name'] in providers_name and c['type'] == c2:
                         logger.debug("Changing location of component %s:  %s -> %s" % (c['name'], c['location'], location))
                         c['location'] = location
+
+    # We remove unused locations
+    universe_merged['locations'] = used_locations(universe_merged)
 
     return universe_merged
