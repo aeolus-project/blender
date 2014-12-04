@@ -15,6 +15,7 @@ logging.getLogger("sleekxmpp").setLevel(logging.INFO)
 
 DEPLOYMENT_ID = "aeolus"
 
+
 def transform_nodeid_to_cn(replay):
     """Transform nodeid to component name by modifiying the replay
     structure."""
@@ -38,7 +39,6 @@ def transform_nodeid_to_cn(replay):
         nodeid = get_location_from_xpath(v[1])
         cn = get_cn_from_mapping(mappings, nodeid)
         v[1] = cn + "/" + get_relative_xpath(v[1])
-
 
 
 def component_name_to_lifecycle(component_name):
@@ -160,7 +160,6 @@ def metis_to_armonic(metis_plan, replay):
     aeolus.launcher.transform_nodeid_to_cn(replay)
 
     plan = []
-    cmd = {}
     for action in metis_plan:
         cn = action['component_name']
         location = get_location(replay, cn)
@@ -175,8 +174,7 @@ def metis_to_armonic(metis_plan, replay):
                 cn,
                 lifecycle,
                 state)
-            cmd = {'cmd':"state-goto", "jid":location, "xpath": remove_location(xpath)}
-
+            cmd = StateGoto(jid=location, xpath=remove_location(xpath))
             xpath = xpath + "/enter"
 
         elif action['type'] == "binding":
@@ -185,13 +183,13 @@ def metis_to_armonic(metis_plan, replay):
                 action['component_target'],
                 action['provide_target'])
 
-            cmd = {'cmd':"provide-call", "jid":location, "xpath": remove_location(xpath), "component_name_target": action['component_target']}
+            cmd = ProvideCall(jid=location, xpath=remove_location(xpath), component_name_target=action['component_target'])
             logger.info(cmd)
 
-        cmd['component_name'] = cn
-        cmd['args'] = [get_variable(replay, xpath, "variables"), {'source' : 'metis', 'id': DEPLOYMENT_ID}]
-        logger.debug("Variables of %s %s %s: %s" % (cmd['jid'], cmd['cmd'], cmd['xpath'], cmd['args']))
-        cmd['args_host'] = get_variable(replay, xpath, "variables_host")
+        cmd.component_name = cn
+        cmd.args = [get_variable(replay, xpath, "variables"), {'source' : 'metis', 'id': DEPLOYMENT_ID}]
+        logger.debug(cmd)
+        cmd.args_host = get_variable(replay, xpath, "variables_host")
 
         plan.append(cmd)
 
@@ -212,46 +210,99 @@ def visualisation_plan(workspace_path):
     def is_final_state(jid, cpt, plan):
         # Used to know if a component state change is the last one or not.
         for p in plan:
-            if p['cmd'] == 'state-goto' and p['jid'] == jid and utils.get_lifecycle(p['xpath']) == cpt:
+            if p.type == 'state-goto' and p.jid == jid and utils.get_lifecycle(p.xpath) == cpt:
                 return False
         return True
 
     ret = []
 
-    ret.append({"action": "begin", "length": len(plan)})
-
     for idx, action in enumerate(plan):
-        tmp = {"component_name": action['component_name']}
+        if type(action) == StateGoto:
+            action.location = action.jid
+            action.component_type = utils.get_lifecycle(action.xpath)
+            action.state = utils.get_state(action.xpath)
+            action.final = is_final_state(action.location, action.component_type, plan[idx+1:])
+            action.last_one = (idx == len(plan) - 1)
 
-        if action['cmd'] == "state-goto":
-            location = action['jid']
-            cpt = utils.get_lifecycle(action['xpath'])
-            state = utils.get_state(action['xpath'])
-            final = is_final_state(location, cpt, plan[idx+1:])
-            last_one = (idx == len(plan) - 1)
-            tmp.update({"location": location, "component_type": cpt, "state":state, "final": final, "action": action['cmd'], "last_one":last_one})
         else:
-            tmp.update({"action": action['cmd'],
-                        "component_name": action['component_name'],
-                        "component_name_target": action['component_name_target'],
-                        "port": action['xpath']})
-        ret.append(tmp)
+            pass
 
-    ret.append({"action": "end"})
+    plan.insert(0, Start(len(plan)))
+    plan.append(End())
 
-    return ret
+    return plan
 
-def run(plan, locations, provide_ret):
+
+class Action(object):
+    type = "undefined"
+
+    def view(self):
+        return {"action": self.type}
+
+
+class Start(Action):
+    type = "begin"
+    def __init__(self, length=None):
+        self.length = length
+
+    def view(self):
+        return {"action": self.type, "length": self.length}
+
+
+class End(Action):
+    type = "end"
+
+
+class StateGoto(Action):
+    type = "state-goto"
+
+    def __init__(self, jid=None, xpath=None, component_name=None):
+        self.jid = jid
+        self.xpath = xpath
+        self.component_name = component_name
+
+        self.location = None
+        self.component_type = None
+        self.state = None
+        self.final = None
+        self.last_one = None
+
+    def view(self):
+        return {"component_name": self.component_name,
+                "location": self.location,
+                "component_type": self.component_type,
+                "state": self.state,
+                "final": self.final,
+                "action": self.type,
+                "last_one": self.last_one}
+
+
+class ProvideCall(Action):
+    type = "provide-call"
+
+    def __init__(self, jid=None, xpath=None, component_name=None, component_name_target=None):
+        self.jid = jid
+        self.xpath = xpath
+        self.component_name = component_name
+        self.component_name_target = component_name_target
+
+    def view(self):
+        return {"component_name": self.component_name,
+                "component_name_target": self.component_name_target,
+                "port": self.xpath}
+
+
+def run(plan, master, locations, provide_ret):
     for p in plan:
         try:
-            logger.info("Managing the provide %s/%s" % (p['jid'], p['xpath']))
-            client = XMPPAgentApi(master, p['jid']+"/agent", deployment_id=DEPLOYMENT_ID)
+            logger.info("Managing the provide %s/%s" % (p.jid, p.xpath))
+            client = XMPPAgentApi(master, p.jid+"/agent", deployment_id=DEPLOYMENT_ID)
             ret = {}
             
-            vars = get_variable_from_provide_ret(provide_ret, p['jid'] + '/' + p['xpath'])
-            p['args'][0] += vars
+            vars = get_variable_from_provide_ret(provide_ret, p.jid + '/' + p.xpath)
+            p.args[0] += vars
             
-            vars_host = p['args_host']
+            vars_host = p.args_host
             if vars_host != []:
                 logger.info("Translating JID to IP...")
             for v in vars_host:
@@ -268,29 +319,29 @@ def run(plan, locations, provide_ret):
                         logger.info("%s : %s" % (v[0], v[1][k]))
                     except KeyError:
                         logger.info("%s host is already transformed to IP" % v[1])
-            p['args'][0] += vars_host
+            p.args[0] += vars_host
 
-            if p['cmd'] == "provide-call":
-                logger.info("Provide call: %s %s" % (p['jid'], p['xpath']))
-                logger.debug(json.dumps(p['args']))
+            if p.type == "provide-call":
+                logger.info("Provide call: %s %s" % (p.jid, p.xpath))
+                logger.debug(json.dumps(p.args))
 
-                ret = client.provide_call(p['xpath'], p['args'])
+                ret = client.provide_call(p.xpath, p.args)
                 #if p['xpath'] == "Httpd/Configured/get_document_root":
                 #    ret = {'url': "wordpress"}
 
                 for d in provide_ret:
-                    if p["jid"] + "/" + p['xpath'] == d['provided']:
+                    if p.jid + "/" + p.xpath == d['provided']:
                         for var, value in ret.items():
                             if var == d['variable_name']:
                                 d['variable_value'] = value
                                 logger.debug("The provide ret variable %s has been updated with value %s" % (d['requirer'], d['variable_value']))
 
-            if p['cmd'] == "state-goto":
-                logger.info("State goto  : %s/%s" % (p['jid'], p['xpath']))
-                logger.debug(json.dumps(p['args']))
-                ret = client.state_goto(p['xpath'], p['args'])
+            if p.type == "state-goto":
+                logger.info("State goto  : %s/%s" % (p.jid, p.xpath))
+                logger.debug(json.dumps(p.args))
+                ret = client.state_goto(p.xpath, p.args)
 
             print ret
         except (XMPPError, Exception):
-            print "armocli", p['cmd'], '-J ', p['jid'] , p['xpath'], "'%s'" % json.dumps(p['args'])
+            print "armocli", p.type, '-J ', p.jid , p.xpath, "'%s'" % json.dumps(p.args)
             raise

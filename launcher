@@ -51,14 +51,14 @@ if __name__ == '__main__':
 
     if args.plan:
         import pprint
-        pprint.pprint(aeolus.launcher.visualisation_plan(args.workspace))
+        pprint.pprint([v.view() for v in aeolus.launcher.visualisation_plan(args.workspace)])
         exit(0)
 
     if args.simulation:
         for p in plan:
-            args = p['args'] 
-            args[0] += p['args_host']
-            print "armocli -j master@im.aeolus.org -p master  %s -J %s %s --json %s " % (p['cmd'], p['jid'], p['xpath'], json.dumps(args))
+            args = p.args
+            args[0] += p.args_host
+            print "armocli -j master@im.aeolus.org -p master  %s -J %s %s --json %s " % (p.type, p.jid, p.xpath, json.dumps(args))
         exit(0)
 
     locations = aeolus.launcher.get_all_locations(replay)
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         locations[k] =  XMPPAgentApi(master, k+"/agent", deployment_id=DEPLOYMENT_ID).info()['public-ip']
         logger.info("\t%s: %s" % (k, locations[k]))
 
-    aeolus.launcher.run(plan, locations, provide_ret)
+    aeolus.launcher.run(plan, master, locations, provide_ret)
 
     master.disconnect()
 
