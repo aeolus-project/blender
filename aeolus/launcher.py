@@ -253,7 +253,43 @@ class End(Action):
     type = "end"
 
 
-class StateGoto(Action):
+class ActionWithArgs(Action):
+    args_host_translated = False
+
+    def translate_args_host(self, locations):
+        """Translate JID to IP by using a locations dict. The value of the
+        variable is upgraded with the IP associated to the JID
+        location key.
+        """
+        if self.args_host_translated:
+            logger.warning("args_host variables have been already translated!")
+            return
+        if self.args_host != []:
+            logger.info("Translating JID to IP...")
+        for v in self.args_host:
+            logger.info("\t%s %s..." % (v[0], id(v)))
+            for k in v[1]:
+                try:
+                    if type(v[1][k]) == list:
+                        acc = []
+                        for e in v[1][k]:
+                            acc.append(locations[e])
+                        v[1][k] = acc
+                    else:
+                        v[1][k] = locations[v[1][k]]
+                    logger.info("%s : %s" % (v[0], v[1][k]))
+                except KeyError:
+                    logger.info("%s host is already transformed to IP" % v[1])
+        self.args_host_translated = True
+
+    def all_vars(self, locations):
+        return self.args + self.args_host
+
+    def armonic(self):
+        pass
+
+
+class StateGoto(ActionWithArgs):
     type = "state-goto"
 
     def __init__(self, jid=None, xpath=None, component_name=None):
@@ -277,7 +313,7 @@ class StateGoto(Action):
                 "last_one": self.last_one}
 
 
-class ProvideCall(Action):
+class ProvideCall(ActionWithArgs):
     type = "provide-call"
 
     def __init__(self, jid=None, xpath=None, component_name=None, component_name_target=None):
@@ -298,36 +334,18 @@ def run(plan, master, locations, provide_ret):
             logger.info("Managing the provide %s/%s" % (p.jid, p.xpath))
             client = XMPPAgentApi(master, p.jid+"/agent", deployment_id=DEPLOYMENT_ID)
             ret = {}
-            
+
             vars = get_variable_from_provide_ret(provide_ret, p.jid + '/' + p.xpath)
             p.args[0] += vars
-            
-            vars_host = p.args_host
-            if vars_host != []:
-                logger.info("Translating JID to IP...")
-            for v in vars_host:
-                logger.info("\t%s %s..." % (v[0], id(v)))
-                for k in v[1]:
-                    try:
-                        if type(v[1][k]) == list:
-                            acc = []
-                            for e in v[1][k]:
-                                acc.append(locations[e])
-                            v[1][k] = acc
-                        else:
-                            v[1][k] = locations[v[1][k]]
-                        logger.info("%s : %s" % (v[0], v[1][k]))
-                    except KeyError:
-                        logger.info("%s host is already transformed to IP" % v[1])
-            p.args[0] += vars_host
+
+            p.translate_args_host(locations)
+            p.args[0] += p.args_host
 
             if p.type == "provide-call":
                 logger.info("Provide call: %s %s" % (p.jid, p.xpath))
                 logger.debug(json.dumps(p.args))
 
                 ret = client.provide_call(p.xpath, p.args)
-                #if p['xpath'] == "Httpd/Configured/get_document_root":
-                #    ret = {'url': "wordpress"}
 
                 for d in provide_ret:
                     if p.jid + "/" + p.xpath == d['provided']:
