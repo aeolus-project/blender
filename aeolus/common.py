@@ -18,7 +18,7 @@ FILE_METIS_PLAN_JSON = "plan-metis.json"
 FILE_SPECIFICATION = "specification.spec"
 
 logger = logging.getLogger("aeolus")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 format = '%(levelname)-7s %(module)s %(message)s'
 ch.setFormatter(logging.Formatter(format))
@@ -27,6 +27,10 @@ logger.addHandler(ch)
 
 def remove_default_handlers():
     logger.removeHandler(ch)
+
+
+def get_root_logger():
+    return logger
 
 
 repositories_to_openstack = {"mbs": "mbs-armonic-latest", "debian": "debian-wheezy-armonic-latest"}

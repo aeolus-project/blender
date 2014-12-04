@@ -10,9 +10,10 @@ import aeolus.launcher
 from armonic.xmpp.client import XMPPCallSync, XMPPAgentApi, XMPPError
 import logging
 format = '%(levelname)-7s %(module)s %(message)s'
-logging.basicConfig(level=logging.INFO, format=format)
 
-logger = logging.getLogger()
+aeolus.common.remove_default_handlers()
+logger = logging.getLogger("aeolus." + __name__)
+logging.basicConfig(level=logging.INFO, format=format)
 
 logging.getLogger("sleekxmpp").setLevel(logging.INFO)
 
@@ -32,7 +33,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.verbose:
-        logger.setLevel(logging.DEBUG)
+        aeolus.common.get_root_logger().setLevel(logging.DEBUG)
 
     file_replay = args.workspace + "/" + aeolus.common.FILE_ARMONIC_REPLAY_FILLED
     file_metis_plan = args.workspace + "/" +  aeolus.common.FILE_METIS_PLAN_JSON
