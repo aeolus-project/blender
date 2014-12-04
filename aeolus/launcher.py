@@ -187,7 +187,7 @@ def metis_to_armonic(metis_plan, replay):
             logger.info(cmd)
 
         cmd.component_name = cn
-        cmd.args = [get_variable(replay, xpath, "variables"), {'source' : 'metis', 'id': DEPLOYMENT_ID}]
+        cmd.args = get_variable(replay, xpath, "variables")
         logger.debug(cmd)
         cmd.args_host = get_variable(replay, xpath, "variables_host")
 
@@ -233,6 +233,37 @@ def visualisation_plan(workspace_path):
     return plan
 
 
+class Plan(object):
+    def __init__(self, actions, provide_ret, locations):
+        self.actions = actions
+        self.provide_ret = provide_ret
+        self.locations = locations
+
+    def update_provide_ret_values(self, current_action, provide_ret_values):
+        for d in self.provide_ret:
+            if current_action.jid + "/" + current_action.xpath == d['provided']:
+                for var, value in provide_ret_values.items():
+                    if var == d['variable_name']:
+                        d['variable_value'] = value
+                        logger.debug("The provide ret variable %s has been updated with value %s" % (d['requirer'], d['variable_value']))
+
+    def run(self, master):
+        for p in self.actions:
+            try:
+                logger.debug("Managing action %s" % p)
+                client = XMPPAgentApi(master, p.jid+"/agent", deployment_id=DEPLOYMENT_ID)
+
+                p.args_from_provide_ret = get_variable_from_provide_ret(self.provide_ret, p.jid + '/' + p.xpath)
+                p.translate_args_host(self.locations)
+
+                provide_ret_values = p.armonic_apply(client)
+                self.update_provide_ret_values(p, provide_ret_values)
+
+            except (XMPPError, Exception):
+                print "armocli", p.type, '-J ', p.jid, p.xpath, "'%s'" % json.dumps(p.armonic_args())
+                raise
+
+
 class Action(object):
     type = "undefined"
 
@@ -253,7 +284,7 @@ class End(Action):
     type = "end"
 
 
-class ActionWithArgs(Action):
+class ActionArmonic(Action):
     args_host_translated = False
 
     def translate_args_host(self, locations):
@@ -282,15 +313,25 @@ class ActionWithArgs(Action):
                     logger.info("%s host is already transformed to IP" % v[1])
         self.args_host_translated = True
 
-    def all_vars(self, locations):
-        return self.args + self.args_host
+    def all_vars(self):
+        return self.args + self.args_host + self.args_from_provide_ret
 
-    def armonic(self):
-        pass
+    def armonic_args(self):
+        """This generate full armonic args, ie. with source and id"""
+        return [self.all_vars(), {'source': 'metis', 'id': DEPLOYMENT_ID}]
+
+    def armonic_command(self):
+        return "armocli %s %s" % (self.method, self.armonic_args())
+
+    def armonic_apply(self, client):
+        """Execute the armonic comand by using the client as a XMPP client"""
+        logger.info(self.armonic_command())
+        return getattr(client, self.method)(self.xpath, self.armonic_args())
 
 
-class StateGoto(ActionWithArgs):
+class StateGoto(ActionArmonic):
     type = "state-goto"
+    method = "state_goto"
 
     def __init__(self, jid=None, xpath=None, component_name=None):
         self.jid = jid
@@ -313,8 +354,9 @@ class StateGoto(ActionWithArgs):
                 "last_one": self.last_one}
 
 
-class ProvideCall(ActionWithArgs):
+class ProvideCall(ActionArmonic):
     type = "provide-call"
+    method = "provide_call"
 
     def __init__(self, jid=None, xpath=None, component_name=None, component_name_target=None):
         self.jid = jid
@@ -326,40 +368,3 @@ class ProvideCall(ActionWithArgs):
         return {"component_name": self.component_name,
                 "component_name_target": self.component_name_target,
                 "port": self.xpath}
-
-
-def run(plan, master, locations, provide_ret):
-    for p in plan:
-        try:
-            logger.info("Managing the provide %s/%s" % (p.jid, p.xpath))
-            client = XMPPAgentApi(master, p.jid+"/agent", deployment_id=DEPLOYMENT_ID)
-            ret = {}
-
-            vars = get_variable_from_provide_ret(provide_ret, p.jid + '/' + p.xpath)
-            p.args[0] += vars
-
-            p.translate_args_host(locations)
-            p.args[0] += p.args_host
-
-            if p.type == "provide-call":
-                logger.info("Provide call: %s %s" % (p.jid, p.xpath))
-                logger.debug(json.dumps(p.args))
-
-                ret = client.provide_call(p.xpath, p.args)
-
-                for d in provide_ret:
-                    if p.jid + "/" + p.xpath == d['provided']:
-                        for var, value in ret.items():
-                            if var == d['variable_name']:
-                                d['variable_value'] = value
-                                logger.debug("The provide ret variable %s has been updated with value %s" % (d['requirer'], d['variable_value']))
-
-            if p.type == "state-goto":
-                logger.info("State goto  : %s/%s" % (p.jid, p.xpath))
-                logger.debug(json.dumps(p.args))
-                ret = client.state_goto(p.xpath, p.args)
-
-            print ret
-        except (XMPPError, Exception):
-            print "armocli", p.type, '-J ', p.jid , p.xpath, "'%s'" % json.dumps(p.args)
-            raise

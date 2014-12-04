@@ -98,7 +98,9 @@ if __name__ == '__main__':
         locations[k] =  XMPPAgentApi(master, k+"/agent", deployment_id=DEPLOYMENT_ID).info()['public-ip']
         logger.info("\t%s: %s" % (k, locations[k]))
 
-    aeolus.launcher.run(plan, master, locations, provide_ret)
+
+    plan = aeolus.launcher.Plan(plan, provide_ret, locations)
+    plan.run(master)
 
     master.disconnect()
 
