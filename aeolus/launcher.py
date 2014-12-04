@@ -9,10 +9,7 @@ import utils
 
 from armonic.xmpp.client import XMPPCallSync, XMPPAgentApi, XMPPError
 import logging
-format = '%(levelname)-7s %(module)s %(message)s'
-logging.basicConfig(level=logging.INFO, format=format)
-
-logger = logging.getLogger()
+logger = logging.getLogger("aeolus." + __name__)
 
 logging.getLogger("sleekxmpp").setLevel(logging.INFO)
 
