@@ -85,7 +85,6 @@ if __name__ == '__main__':
 
     master =  XMPPClient(xmpp_account, "master", autoconnect=True, muc_domain="logs.aeiche.innovation.mandriva.com")
     
-    plan.get_locations(master)
     for p in plan.run(master):
         logger.info(p.armonic_command())
 

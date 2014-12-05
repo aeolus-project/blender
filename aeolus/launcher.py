@@ -250,6 +250,9 @@ class Plan(object):
                         logger.debug("The provide ret variable %s has been updated with value %s" % (d['requirer'], d['variable_value']))
 
     def run(self, master):
+        # Get IPs of locations
+        self.get_locations(master)
+
         for p in self.actions:
             yield p
             if not issubclass(type(p), ActionArmonic):
@@ -258,6 +261,7 @@ class Plan(object):
                 logger.debug("Managing action %s" % p)
                 client = XMPPAgentApi(master, p.jid+"/agent", deployment_id=DEPLOYMENT_ID)
 
+                # Get variable from provide ret
                 p.args_from_provide_ret = get_variable_from_provide_ret(self.provide_ret, p.jid + '/' + p.xpath)
                 p.translate_args_host(self.locations)
 
