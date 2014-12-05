@@ -48,24 +48,21 @@ if __name__ == '__main__':
     with open(file_configuration, 'r') as f:
         configuration = json.load(f)
 
-    plan = aeolus.launcher.metis_to_armonic(metis_plan, replay)
+    plan = aeolus.launcher.Plan(replay, metis_plan)
 
     if args.plan:
         import pprint
-        pprint.pprint([v.view() for v in aeolus.launcher.visualisation_plan(args.workspace)])
+        pprint.pprint([v.view() for v in plan.actions])
         exit(0)
 
     if args.simulation:
-        for p in plan:
-            args = p.args
-            args[0] += p.args_host
-            print "armocli -j master@im.aeolus.org -p master  %s -J %s %s --json %s " % (p.type, p.jid, p.xpath, json.dumps(args))
+        for p in plan.actions:
+            print p.armonic_command(jid="master@im.aeolus.org", password="master")
         exit(0)
 
-    locations = aeolus.launcher.get_all_locations(replay)
     if args.machine or args.nova:
         machines = []
-        for location in locations:
+        for location in plan.locations:
             for l in configuration['locations']:
                 if l['name'] == location:
                     machines.append((location, l['repository']))
@@ -79,11 +76,6 @@ if __name__ == '__main__':
                 print "nova  boot --flavor m1.tiny --image %s --meta armonic_xmpp_domain=aeiche.innovation.mandriva.com %s" % (image, server_name)
         exit(0)
 
-    provide_ret = aeolus.launcher.get_provide_ret(replay)
-    logger.debug("Provide ret")
-    for p in provide_ret:
-        logger.debug("\t%s" % p)
-    
     xmpp_account = "master@aeiche.innovation.mandriva.com"
     logger.info("Using account XMPP %s" % xmpp_account)
     class XMPPClient(XMPPCallSync):
@@ -93,13 +85,7 @@ if __name__ == '__main__':
 
     master =  XMPPClient(xmpp_account, "master", autoconnect=True, muc_domain="logs.aeiche.innovation.mandriva.com")
     
-    logger.info("Retrieving public IP from JID...")
-    for k in locations:
-        locations[k] =  XMPPAgentApi(master, k+"/agent", deployment_id=DEPLOYMENT_ID).info()['public-ip']
-        logger.info("\t%s: %s" % (k, locations[k]))
-
-
-    plan = aeolus.launcher.Plan(plan, provide_ret, locations)
+    plan.get_locations(master)
     plan.run(master)
 
     master.disconnect()

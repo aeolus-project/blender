@@ -234,10 +234,12 @@ def visualisation_plan(workspace_path):
 
 
 class Plan(object):
-    def __init__(self, actions, provide_ret, locations):
-        self.actions = actions
-        self.provide_ret = provide_ret
-        self.locations = locations
+    def __init__(self, replay, metis_plan):
+        self.actions = metis_to_armonic(metis_plan, replay)
+        self.provide_ret = aeolus.launcher.get_provide_ret(replay)
+        self.locations = get_all_locations(replay)
+        
+        self.create_visualisation_attributes()
 
     def update_provide_ret_values(self, current_action, provide_ret_values):
         for d in self.provide_ret:
@@ -249,6 +251,8 @@ class Plan(object):
 
     def run(self, master):
         for p in self.actions:
+            if not issubclass(type(p), ActionArmonic):
+                continue
             try:
                 logger.debug("Managing action %s" % p)
                 client = XMPPAgentApi(master, p.jid+"/agent", deployment_id=DEPLOYMENT_ID)
@@ -263,12 +267,46 @@ class Plan(object):
                 print "armocli", p.type, '-J ', p.jid, p.xpath, "'%s'" % json.dumps(p.armonic_args())
                 raise
 
+    def get_locations(self, master):
+        logger.info("Retrieving public IP from JID...")
+        for k in self.locations:
+            self.locations[k] =  XMPPAgentApi(master, k+"/agent", deployment_id=DEPLOYMENT_ID).info()['public-ip']
+            logger.info("\t%s: %s" % (k, self.locations[k]))
+
+    def create_visualisation_attributes(self):
+        def is_final_state(jid, cpt, actions):
+            # Used to know if a component state change is the last one or not.
+            for p in actions:
+                if p.type == 'state-goto' and p.jid == jid and utils.get_lifecycle(p.xpath) == cpt:
+                    return False
+            return True
+
+        for idx, action in enumerate(self.actions):
+            if type(action) == StateGoto:
+                action.location = action.jid
+                action.component_type = utils.get_lifecycle(action.xpath)
+                action.state = utils.get_state(action.xpath)
+                action.final = is_final_state(action.location, action.component_type, self.actions[idx+1:])
+                action.last_one = (idx == len(self.actions) - 1)
+            else:
+                pass
+
+        # Add header and footer used to inform interface deployment has started and is ended
+        self.actions.insert(0, Start(len(self.actions)))
+        self.actions.append(End())
+
 
 class Action(object):
     type = "undefined"
 
     def view(self):
         return {"action": self.type}
+
+    def armonic_command(self, jid=None, password=None):
+        return ""
+
+    def armonic_apply(self):
+        return
 
 
 class Start(Action):
@@ -286,6 +324,7 @@ class End(Action):
 
 class ActionArmonic(Action):
     args_host_translated = False
+    args_from_provide_ret = []
 
     def translate_args_host(self, locations):
         """Translate JID to IP by using a locations dict. The value of the
@@ -320,8 +359,8 @@ class ActionArmonic(Action):
         """This generate full armonic args, ie. with source and id"""
         return [self.all_vars(), {'source': 'metis', 'id': DEPLOYMENT_ID}]
 
-    def armonic_command(self):
-        return "armocli %s %s" % (self.method, self.armonic_args())
+    def armonic_command(self, jid=None, password=None):
+        return "armocli -j %s -p %s  %s -J %s %s --json %s " % (jid, password, self.method, self.jid, self.xpath, json.dumps(self.armonic_args()))
 
     def armonic_apply(self, client):
         """Execute the armonic comand by using the client as a XMPP client"""
