@@ -251,6 +251,7 @@ class Plan(object):
 
     def run(self, master):
         for p in self.actions:
+            yield p
             if not issubclass(type(p), ActionArmonic):
                 continue
             try:
