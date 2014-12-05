@@ -82,14 +82,21 @@ class FillProvide(Provide):
             return True
         return False
 
-    def on_manage(self, data):
-        return True
+    def do_manage(self):
+        self.manage = True
+        return False
 
     def do_call(self):
         return False
 
     def do_multiplicity(self):
         return False
+
+    def do_post_specialize(self):
+        return True
+
+    def do_post_validation(self):
+        return True
 
 
 class XMPPMaster(XMPPCallSync):
@@ -521,9 +528,9 @@ class XMPPMaster(XMPPCallSync):
 
         if self.current_step == "validation":
             provide, step, args = self.smart.send(json.loads(payload['values']['validation']))
-        elif self.current_step == "manage":
-            # Alwayes manage the provide. We do this step to give
-            # current provide information to warmonic
+
+        elif self.current_step is not None and self.current_step.startswith(("post_", "pre_")):
+            # just send something, we don't have any on_ methods anyway
             provide, step, args = self.smart.send(True)
         else:
             provide, step, args = self.smart.next()
@@ -578,8 +585,6 @@ class XMPPMaster(XMPPCallSync):
                                        required=variable.required)
                 for key, value in variable.extra.items():
                     field.add_option(label=str(key), value=str(value))
-        elif step == 'manage':
-            pass
 
         session['payload'] = form
         session['next'] = self._handle_command_fill_next
