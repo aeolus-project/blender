@@ -4,6 +4,7 @@ import logging
 import configargparse as argparse
 from uuid import uuid4
 import json
+import time
 
 from sleekxmpp.thirdparty import OrderedDict
 from sleekxmpp.exceptions import IqTimeout, IqError
@@ -192,6 +193,10 @@ class XMPPMaster(XMPPCallSync):
         form = self['xep_0004'].makeForm('form', 'Set specification')
         form['instructions'] = 'set specification'
 
+        # Deployment mode are
+        # normal
+        # simulation
+        mode = payload['values']['mode']
         workspace_name = payload['values']['workspace']
         workspace = aeolus.workspace.Workspace.use(workspace_name)
         session['workspace'] = workspace
@@ -199,14 +204,20 @@ class XMPPMaster(XMPPCallSync):
         logger.debug("Starting command deploy with id: '%s'" % workspace.name)
         self.join_muc_room(workspace.name)
 
-        plan = aeolus.launcher.visualisation_plan(workspace.path)
-        import time
-        for p in plan:
+        plan = aeolus.launcher.Plan(workspace.get_replay_filled(), workspace.get_metis_plan())
+
+        if mode == "normal":
+            actions = plan.run(self, workspace.name)
+        elif mode == "simulation":
+            actions = plan.actions
+
+        for p in actions:
             msg = self.Message()
-            msg['body'] = json.dumps(p)
+            msg['body'] = json.dumps(p.view())
             logger.debug("Sending: %s", msg['body'])
             self.send_muc_message(workspace.name, msg)
-            time.sleep(1)
+            if mode == "simulation":
+                time.sleep(1)
 
         session['payload'] = form
         session['next'] = None
