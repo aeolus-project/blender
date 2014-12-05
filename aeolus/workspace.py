@@ -61,3 +61,14 @@ class Workspace(object):
                 components.append(c['name'])
 
         return {'initial': initial, 'components': components}
+
+    def _get_json_from_file(self, filename):
+        path = os.path.join(self.path, filename)
+        with open(path, 'r') as f:
+            return json.load(f)
+
+    def get_replay_filled(self):
+        return self._get_json_from_file(common.FILE_ARMONIC_REPLAY_FILLED)
+
+    def get_metis_plan(self):
+        return self._get_json_from_file(common.FILE_METIS_PLAN_JSON)
