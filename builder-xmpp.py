@@ -449,13 +449,25 @@ class XMPPMaster(XMPPCallSync):
         spec = payload['values']['specification']
         spec_file = workspace.path + "/" + aeolus.common.FILE_SPECIFICATION
 
-        logger.info("Adding force_repositories clauses to specification file to '%s'" % spec_file)
-        spec = spec + "\n".join(aeolus.utils.force_repositories(INPUT_CONFIGURATION))
+        # Creating a initial configuration file
+        initial_conf_filepath = workspace.get_filepath(aeolus.common.FILE_INITIAL_CONFIGURATION)
+        logger.info("Writing initial configuration file %s..." % initial_conf_filepath)
+        initial_conf = aeolus.utils.create_initial_configuration(
+            workspace.get_universe_merged())
+        f = open(initial_conf_filepath, 'w')
+        f.write(json.dumps(initial_conf, indent=2))
+        f.close()
 
+        # Adding some clauses...
+        logger.info("Adding force_repositories clauses to specification file to '%s'" % spec_file)
+        spec = spec + "\n".join(aeolus.utils.force_repositories(initial_conf_filepath))
+
+        # Generating specification file based on user criterion
         logger.info("Writing specification file to '%s'" % spec_file)
         f = open(spec_file, 'w')
         f.write(spec)
 
+        # Upgrade universe file to take into account cardinality requested by user
         card = json.loads(payload['values']['cardinality'])
         print card
         logger.debug("Cardinalities specified by user are:")
@@ -469,7 +481,7 @@ class XMPPMaster(XMPPCallSync):
         aeolus.utils.apply_cardinality(f, card)
 
         aeolus.maker.run(workspace.path,
-                         INPUT_CONFIGURATION,
+                         initial_conf_filepath,
                          workspace.path + "/" + aeolus.common.FILE_SPECIFICATION)
         logger.info("Maker has generated all files")
         session['next'] = None
