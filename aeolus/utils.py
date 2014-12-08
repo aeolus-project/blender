@@ -65,6 +65,16 @@ def force_repositories(input_configuration):
     clauses = []
     with open(input_configuration, 'r') as f:
         u = json.load(f)
+
+        # If there is no more than 1 repository, we don't genreate
+        # these special clauses
+        repositories = []
+        for l in u['locations']:
+            if l['repository'] not in repositories:
+                repositories.append(l['repository'])
+        if len(repositories) <= 1:
+            return clauses
+
         for l in u['locations']:
             srv_name = l['name']
             repo = l['repository']
