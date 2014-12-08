@@ -534,9 +534,14 @@ class XMPPMaster(XMPPCallSync):
         if self.smart is None:
             logger.debug("Step: Create root_provide")
             xpath = payload['values']['xpath']
+
+            workspace_name = payload['values']['workspace']
+            workspace = aeolus.workspace.Workspace.use(workspace_name)
+            session['workspace'] = workspace
+
             self.root_provide = FillProvide(xpath)
-            input_file = 'replay.json'
-            output_file = 'replay-filled-warmonic.json'
+            input_file = workspace.get_filepath('replay.json')
+            self.deployment_values_output_file = workspace.get_filepath('replay-filled.json')
             with open(input_file) as h:
                 values = json.load(h)
             self.smart = smart_call(self.root_provide, values)

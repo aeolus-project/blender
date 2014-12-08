@@ -72,3 +72,6 @@ class Workspace(object):
 
     def get_metis_plan(self):
         return self._get_json_from_file(common.FILE_METIS_PLAN_JSON)
+
+    def get_filepath(self, filename):
+        return os.path.join(self.path, filename)
