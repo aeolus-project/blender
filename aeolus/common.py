@@ -16,6 +16,7 @@ FILE_ARMONIC_REPLAY_FILLED = "replay-filled.json"
 FILE_METIS_PLAN_JSON = "plan-metis.json"
 
 FILE_SPECIFICATION = "specification.spec"
+FILE_INITIAL_CONFIGURATION = "initial_configuration.json"
 
 logger = logging.getLogger("aeolus")
 logger.setLevel(logging.DEBUG)
