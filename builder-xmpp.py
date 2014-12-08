@@ -34,6 +34,8 @@ logger = logging.getLogger()
 AEOLUS_WORKSPACE = "xmpp_builder"
 INPUT_CONFIGURATION = "data/configurations/many-locations-multiple-repos.json"
 
+armonic.common.SIMULATION = True
+armonic.common.DONT_VALIDATE_ON_CALL = True
 
 class BuildProvide(Provide):
 
@@ -87,8 +89,10 @@ class FillProvide(Provide):
         self.manage = True
         return False
 
-    def do_call(self):
-        return False
+    def on_call(self, data):
+        # We call it but in SIMULATION MODE!
+        self.call = True
+        return True
 
     def do_multiplicity(self):
         return False
