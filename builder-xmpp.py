@@ -561,12 +561,6 @@ class XMPPMaster(XMPPCallSync):
             self.report_exception(session['from'], args)
             self.smart.next()
 
-        if provide is None and step is STEP_DEPLOYMENT_VALUES:
-            with open(output_file, 'w') as fp:
-                json.dump(args, fp, indent=2)
-                logger.info("Deployment values written in %s" %
-                            output_file)
-
         form = self['xep_0004'].makeForm('form', 'Fill specification')
         self.current_step = step
 
@@ -612,6 +606,15 @@ class XMPPMaster(XMPPCallSync):
 
         # If the root provide step is done, this is the last answer.
         if step == 'done' and provide == self.root_provide:
+
+            logger.info("Deployment tree has been created")
+            provide, step, args = self.smart.next()
+            if step is STEP_DEPLOYMENT_VALUES:
+                with open(self.deployment_values_output_file, 'w') as fp:
+                    json.dump(args, fp, indent=2)
+                    logger.info("Deployment values written in %s" %
+                                self.deployment_values_output_file)
+
             session['next'] = None
             session['has_next'] = False
 
