@@ -67,9 +67,7 @@ class BuildProvide(Provide):
         else:
             return 1
 
-
 lfms = {}
-
 
 class FillProvide(Provide):
 
@@ -77,6 +75,7 @@ class FillProvide(Provide):
         self.lfm_host = host
         self.host = host
         if host not in lfms:
+            logger.info("Creating a new lfm for host %s" % host)
             lfms[host] = Serialize(os_type=armonic.utils.OsTypeAll())
         self.lfm = lfms[host]
 
@@ -523,6 +522,10 @@ class XMPPMaster(XMPPCallSync):
         return session
 
     def _handle_command_fill(self, iq, session):
+        # for k, l in lfms.items():
+        #     del(l)
+        lfms.clear()
+
         self.session_id = str(uuid4())
         self.smart = None
         self.root_provide = None
