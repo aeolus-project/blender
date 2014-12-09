@@ -49,6 +49,9 @@ class BuildProvide(Provide):
     def do_call(self):
         return False
 
+    def do_post_specialize(self):
+        return True
+
     def on_lfm(self, data):
         pass
 
