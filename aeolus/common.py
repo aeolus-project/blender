@@ -37,7 +37,7 @@ def get_root_logger():
 repositories_to_openstack = {"mbs": "mbs-armonic-latest", "debian": "debian-wheezy-armonic-latest"}
 
 # How many machine if each repository we create
-MACHINE_NUMBER = 5
+MACHINE_NUMBER = 4
 
 # This is used to create machine name based on the repositories.
 repositories_to_server_name = {
