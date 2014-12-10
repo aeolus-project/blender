@@ -193,6 +193,24 @@ def metis_to_armonic(metis_plan, replay):
 
         plan.append(cmd)
 
+    # We manually add the provide called by the user since it is not
+    # managed by Metis
+    xpath = ""
+    for s in replay['specialize']:
+        if s[0] == "node_0///*":
+            xpath = remove_location(s[1])
+    for l in replay['lfm']:
+        if l[0] == "node_0///*":
+            location = s[1]
+    cmd = ProvideCall(jid=location,
+                      xpath=xpath,
+                      component_name_target=get_cn_from_mapping(replay['mapping'], "node_0"))
+    cmd.component_name = "User"
+    cmd.args = get_variable(replay, xpath, "variables")
+    cmd.args_host = get_variable(replay, xpath, "variables_host")
+
+    plan.append(cmd)
+
     return plan
 
 
