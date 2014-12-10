@@ -284,6 +284,12 @@ class Plan(object):
                 p.translate_args_host(self.locations)
 
                 provide_ret_values = p.armonic_apply(client)
+
+                # Send provide_ret value to the room
+                if provide_ret_values not in [{}, None] and p.type == "provide-call":
+                    msg = master.Message()
+                    msg['body'] = json.dumps(ProvideRet(p.component_name_target, provide_ret_values).view())
+                    master.send_muc_message(room_id, msg)
                 self.update_provide_ret_values(p, provide_ret_values)
 
             except (XMPPError, Exception):
@@ -343,6 +349,17 @@ class Start(Action):
 
 class End(Action):
     type = "end"
+
+
+class ProvideRet(Action):
+    type = "provide_ret"
+
+    def __init__(self, component_name, value):
+        self.component_name = component_name
+        self.value = value
+
+    def view(self):
+        return {"action": self.type, "component_name": self.component_name, "value": self.value}
 
 
 class ActionArmonic(Action):
