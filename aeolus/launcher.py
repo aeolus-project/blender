@@ -252,11 +252,13 @@ def visualisation_plan(workspace_path):
 
 
 class Plan(object):
-    def __init__(self, replay, metis_plan):
+    def __init__(self, replay, metis_plan, configuration):
         self.actions = metis_to_armonic(metis_plan, replay)
         self.provide_ret = aeolus.launcher.get_provide_ret(replay)
         self.locations = get_all_locations(replay)
-        
+        self.nova_locations = self._get_nova_locations(configuration)
+
+        self.actions = self.nova_locations + self.actions
         self.create_visualisation_attributes()
 
     def update_provide_ret_values(self, current_action, provide_ret_values):
@@ -266,6 +268,17 @@ class Plan(object):
                     if var == d['variable_name']:
                         d['variable_value'] = value
                         logger.debug("The provide ret variable %s has been updated with value %s" % (d['requirer'], d['variable_value']))
+
+    def _get_nova_locations(self, configuration):
+        machines = []
+        for location in self.locations:
+            for l in configuration['locations']:
+                if l['name'] == location:
+                    r = l['repository']
+                    image = aeolus.common.repositories_to_openstack[r]
+                    server_name = re.search("(.*)@.*", location).group(1)
+                    machines.append(NovaBoot(server_name, image))
+        return machines
 
     def run(self, master, room_id="aeolus"):
         # Get IPs of locations
@@ -336,6 +349,17 @@ class Action(object):
 
     def armonic_apply(self):
         return
+
+
+class NovaBoot(Action):
+    type = "nova-boot"
+
+    def __init__(self, name, image):
+        self.name = name
+        self.image = image
+
+    def view(self):
+        return {"action": self.type, 'image': self.image, 'name': self.name}
 
 
 class Start(Action):

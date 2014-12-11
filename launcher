@@ -48,7 +48,7 @@ if __name__ == '__main__':
     with open(file_configuration, 'r') as f:
         configuration = json.load(f)
 
-    plan = aeolus.launcher.Plan(replay, metis_plan)
+    plan = aeolus.launcher.Plan(replay, metis_plan, configuration)
 
     if args.plan:
         import pprint
@@ -60,7 +60,7 @@ if __name__ == '__main__':
             print p.armonic_command(jid="master@im.aeolus.org", password="master")
         exit(0)
 
-    if args.machine or args.nova:
+    if args.machine:
         machines = []
         for location in plan.locations:
             for l in configuration['locations']:
@@ -69,11 +69,11 @@ if __name__ == '__main__':
         if args.machine:
             for m, r in machines:
                     print m, "[%s]" % r
-        if args.nova:
-            for m, r in machines:
-                image = aeolus.common.repositories_to_openstack[r]
-                server_name = re.search("(.*)@.*", m).group(1)
-                print "nova  boot --flavor m1.tiny --image %s --meta armonic_xmpp_domain=aeiche.innovation.mandriva.com %s" % (image, server_name)
+        exit(0)
+
+    if args.nova:
+        for l in plan.nova_locations:
+            print "nova  boot --flavor m1.tiny --image %s --meta armonic_xmpp_domain=aeiche.innovation.mandriva.com %s" % (l.image, l.name)
         exit(0)
 
     xmpp_account = "master@aeiche.innovation.mandriva.com"

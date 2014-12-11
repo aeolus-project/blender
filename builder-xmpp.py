@@ -210,7 +210,10 @@ class XMPPMaster(XMPPCallSync):
         logger.debug("Starting command deploy with id: '%s'" % workspace.name)
         self.join_muc_room(workspace.name)
 
-        plan = aeolus.launcher.Plan(workspace.get_replay_filled(), workspace.get_metis_plan())
+        plan = aeolus.launcher.Plan(
+            workspace.get_replay_filled(),
+            workspace.get_metis_plan(),
+            workspace.get_configuration())
 
         if mode == "normal":
             actions = plan.run(self, workspace.name)
