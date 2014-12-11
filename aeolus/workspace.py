@@ -76,5 +76,8 @@ class Workspace(object):
     def get_universe_merged(self):
         return self._get_json_from_file(common.FILE_UNIVERSE_MERGED)
 
+    def get_configuration(self):
+        return self._get_json_from_file(common.FILE_CONFIGURATION)
+
     def get_filepath(self, filename):
         return os.path.join(self.path, filename)
