@@ -4,6 +4,7 @@ import json
 import re
 import pprint
 
+import aeolus.provisionning
 import aeolus.common
 import utils
 
@@ -277,8 +278,12 @@ class Plan(object):
                     r = l['repository']
                     image = aeolus.common.repositories_to_openstack[r]
                     server_name = re.search("(.*)@.*", location).group(1)
-                    machines.append(NovaBoot(server_name, image))
-        return machines
+                    machines.append(NovaBoot(name=server_name, image=image, jid=location))
+
+        wait = []
+        for location in self.locations:
+            wait.append(WaitAgent(location))
+        return machines + wait
 
     def run(self, master, room_id="aeolus"):
         # Get IPs of locations
@@ -286,8 +291,14 @@ class Plan(object):
 
         for p in self.actions:
             yield p
+
+            if issubclass(type(p), WaitAgent):
+                p.apply(master)
+                continue
+
             if not issubclass(type(p), ActionArmonic):
                 continue
+
             try:
                 logger.debug("Managing action %s" % p)
                 client = XMPPAgentApi(master, p.jid+"/agent", deployment_id=room_id)
@@ -347,19 +358,37 @@ class Action(object):
     def armonic_command(self, jid=None, password=None):
         return ""
 
-    def armonic_apply(self):
+    def apply(self):
         return
 
 
 class NovaBoot(Action):
     type = "nova-boot"
 
-    def __init__(self, name, image):
+    def __init__(self, jid, name, image):
+        self.jid = jid
         self.name = name
         self.image = image
 
     def view(self):
-        return {"action": self.type, 'image': self.image, 'name': self.name}
+        return {"action": self.type, 'image': self.image, 'name': self.name, 'jid': self.jid}
+
+    def apply(self):
+        return aeolus.provisionning.boot(self.name, self.image)
+
+
+class WaitAgent(Action):
+    type = "wait-agent"
+
+    def __init__(self, jid):
+        self.jid = jid
+
+    def view(self):
+        return {"action": self.type, 'jid': self.jid}
+
+    def apply(self, client):
+        logger.debug("Waiting for agent %s..." % self.jid)
+        return client.wait_available(self.jid)
 
 
 class Start(Action):
@@ -426,7 +455,7 @@ class ActionArmonic(Action):
     def armonic_command(self, jid=None, password=None):
         return "armocli -j %s -p %s  %s -J %s %s --json %s " % (jid, password, self.method, self.jid, self.xpath, json.dumps(self.armonic_args()))
 
-    def armonic_apply(self, client):
+    def apply(self, client):
         """Execute the armonic comand by using the client as a XMPP client"""
         logger.info(self.armonic_command())
         return getattr(client, self.method)(self.xpath, self.armonic_args())

@@ -28,6 +28,7 @@ if __name__ == '__main__':
     parser.add_argument('--plan', '-p', action='store_true', help="Don't perform XMPP calls")
     parser.add_argument('--machine', '-m', action='store_true', help="Show required machines")
     parser.add_argument('--nova', '-n', action='store_true', help="Show nova boot commands")
+    parser.add_argument('--boot', '-b', action='store_true', help="Just boot locations")
     parser.add_argument('--verbose', '-v', action='store_true', help="Verbose")
 
     args = parser.parse_args()
@@ -84,6 +85,17 @@ if __name__ == '__main__':
             self.join_muc_room("aeolus")
 
     master =  XMPPClient(xmpp_account, "master", autoconnect=True, muc_domain="logs.aeiche.innovation.mandriva.com")
+
+
+    if args.boot:
+        import pprint
+        for v in plan.actions:
+            if v.type in ["nova-boot"]:
+                v.apply()
+            elif  v.type in ["wait-agent"]:
+                v.apply(master)
+        master.disconnect()
+        exit(0)
     
     for p in plan.run(master):
         logger.info(p.armonic_command())
