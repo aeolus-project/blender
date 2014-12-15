@@ -470,4 +470,5 @@ class ProvideCall(ActionArmonic):
     def view(self):
         return {"component_name": self.component_name,
                 "component_name_target": self.component_name_target,
-                "port": self.xpath}
+                "port": self.xpath,
+                "action": self.type}
