@@ -286,10 +286,15 @@ class Plan(object):
         return machines + wait
 
     def run(self, master, room_id="aeolus"):
-        # Get IPs of locations
-        self.get_locations(master)
+        hack = False
 
         for p in self.actions:
+            # This is a hack. See commit message.
+            if issubclass(type(p), ActionArmonic) and hack is False:
+                # Get IPs of locations
+                self.get_locations(master)
+                hack = True
+
             yield p
 
             if issubclass(type(p), WaitAgent):
