@@ -296,6 +296,10 @@ class Plan(object):
                 p.apply(master)
                 continue
 
+            if issubclass(type(p), NovaBoot):
+                p.apply()
+                continue
+
             if not issubclass(type(p), ActionArmonic):
                 continue
 
@@ -307,7 +311,7 @@ class Plan(object):
                 p.args_from_provide_ret = get_variable_from_provide_ret(self.provide_ret, p.jid + '/' + p.xpath)
                 p.translate_args_host(self.locations)
 
-                provide_ret_values = p.armonic_apply(client)
+                provide_ret_values = p.apply(client)
 
                 # Send provide_ret value to the room
                 if provide_ret_values not in [{}, None] and p.type == "provide-call":
