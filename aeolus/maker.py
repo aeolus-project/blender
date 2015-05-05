@@ -41,7 +41,7 @@ def run(workspace, input_configuration, specification):
     file_universe = workspace + common.FILE_UNIVERSE_UNMERGED
     file_universe_merged = workspace + common.FILE_UNIVERSE_MERGED
 
-    file_output_zephyrus = workspace + "/configuration-zephyrus.json"
+    file_output_zephyrus = workspace + "/" + common.FILE_ZEPHYRUS_OUTPUT_JSON
     file_output_zephyrus_dot = workspace + "/configuration-zephyrus.dot"
     file_output_unmerged = workspace + "/configuration-unmerged.json"
     file_output_metis = workspace + "/plan-metis.log"

@@ -8,6 +8,7 @@ FILE_UNIVERSE_MERGED = "universe-merged.json"
 FILE_UNIVERSE_UNMERGED = "universe.json"
 FILE_UNIVERSE = "universe.json"
 
+FILE_ZEPHYRUS_OUTPUT_JSON = "configuration-zephyrus.json"
 FILE_CONFIGURATION = "configuration-unmerged.json"
 
 FILE_ARMONIC_REPLAY = "replay.json"
